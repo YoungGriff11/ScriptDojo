@@ -1,1 +1,126 @@
- 
+ # .gitlab-ci.yml
+stages:
+  - build
+  - test
+  - deploy
+
+# Variables (customize as needed)
+variables:
+  MYSQL_ROOT_PASSWORD: root
+  MYSQL_DATABASE: scriptdojo
+  SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/scriptdojo?useSSL=false&serverTimezone=UTC
+
+# Build Backend (Spring Boot with Maven)
+build-backend:
+  stage: build
+  image: maven:3.8.6-openjdk-17
+  script:
+    - cd backend
+    - mvn clean install -DskipTests
+  cache:
+    paths:
+      - backend/.m2/
+  artifacts:
+    paths:
+      - backend/target/*.jar
+  tags:
+    - docker
+
+# Build Frontend (React with Vite)
+build-frontend:
+  stage: build
+  image: node:18
+  script:
+    - cd frontend
+    - npm install
+    - npm run build
+  cache:
+    paths:
+      - frontend/node_modules/
+  artifacts:
+    paths:
+      - frontend/dist/
+  tags:
+    - docker
+
+# Test Backend (JUnit)
+test-backend:
+  stage: test
+  image: maven:3.8.6-openjdk-17
+  script:
+    - cd backend
+    - mvn test
+  dependencies:
+    - build-backend
+  artifacts:
+    paths:
+      - backend/target/surefire-reports/
+  tags:
+    - docker
+
+# Test Frontend (Playwright)
+test-frontend:
+  stage: test
+  image: mcr.microsoft.com/playwright:v1.45.0-jammy
+  script:
+    - cd frontend
+    - npm install
+    - npx playwright install
+    - npx playwright test
+  dependencies:
+    - build-frontend
+  artifacts:
+    paths:
+      - frontend/test-results/
+  tags:
+    - docker
+
+# Build Docker Images
+build-docker-images:
+  stage: build
+  image: docker:20.10
+  services:
+    - docker:dind
+  script:
+    - docker build -t conorgriffin1/scriptdojo-backend:latest -f backend/Dockerfile backend/
+    - docker build -t conorgriffin1/scriptdojo-frontend:latest -f frontend/Dockerfile frontend/
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - docker push conorgriffin1/scriptdojo-backend:latest
+    - docker push conorgriffin1/scriptdojo-frontend:latest
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_DRIVER: overlay2
+  tags:
+    - docker
+
+# Deploy (Run Docker Compose)
+deploy:
+  stage: deploy
+  image: docker:20.10
+  services:
+    - docker:dind
+  script:
+    - apk add --no-cache bash curl
+    - docker pull conorgriffin1/scriptdojo-backend:latest
+    - docker pull conorgriffin1/scriptdojo-frontend:latest
+    - docker pull mysql:8
+    - docker network create scriptdojo-net || true
+    - docker-compose -f docker-compose.yml up -d
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_DRIVER: overlay2
+  tags:
+    - docker
+
+# Optional: Setup MySQL (if not handled by Docker Compose)
+setup-db:
+  stage: deploy
+  image: mysql:8
+  script:
+    - mysql -h mysql -u root -proot -e "CREATE DATABASE IF NOT EXISTS scriptdojo;"
+    - mysql -h mysql -u root -proot scriptdojo < backend/src/main/resources/schema.sql
+  variables:
+    MYSQL_HOST: mysql
+    MYSQL_ROOT_PASSWORD: $MYSQL_ROOT_PASSWORD
+  tags:
+    - docker
