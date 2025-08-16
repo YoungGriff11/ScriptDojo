@@ -8,12 +8,12 @@ stages:
 variables:
   MYSQL_ROOT_PASSWORD: root
   MYSQL_DATABASE: scriptdojo
-  SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/scriptdojo?useSSL=false&serverTimezone=UTC
+  SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3307/scriptdojo?useSSL=false&serverTimezone=UTC
 
 # Build Backend (Spring Boot with Maven)
 build-backend:
   stage: build
-  image: maven:3.8.6-openjdk-17
+  image: maven:3.9.11-openjdk-17
   script:
     - cd backend
     - mvn clean install -DskipTests
@@ -29,7 +29,7 @@ build-backend:
 # Build Frontend (React with Vite)
 build-frontend:
   stage: build
-  image: node:18
+  image: node:22
   script:
     - cd frontend
     - npm install
@@ -46,7 +46,7 @@ build-frontend:
 # Test Backend (JUnit)
 test-backend:
   stage: test
-  image: maven:3.8.6-openjdk-17
+  image: maven:3.9.11-openjdk-17
   script:
     - cd backend
     - mvn test
