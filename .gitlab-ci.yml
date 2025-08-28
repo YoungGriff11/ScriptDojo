@@ -75,42 +75,6 @@ test-frontend:
   tags:
     - docker
 
-# Build Docker Images
-build-docker-images:
-  stage: build
-  image: docker:20.10
-  services:
-    - docker:dind
-  script:
-    - docker build -t conorgriffin1/scriptdojo-backend:latest -f backend/Dockerfile backend/
-    - docker build -t conorgriffin1/scriptdojo-frontend:latest -f frontend/Dockerfile frontend/
-    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
-    - docker push conorgriffin1/scriptdojo-backend:latest
-    - docker push conorgriffin1/scriptdojo-frontend:latest
-  variables:
-    DOCKER_HOST: tcp://docker:2375
-    DOCKER_DRIVER: overlay2
-  tags:
-    - docker
-
-# Deploy (Run Docker Compose)
-deploy:
-  stage: deploy
-  image: docker:20.10
-  services:
-    - docker:dind
-  script:
-    - apk add --no-cache bash curl
-    - docker pull conorgriffin1/scriptdojo-backend:latest
-    - docker pull conorgriffin1/scriptdojo-frontend:latest
-    - docker pull mysql:8
-    - docker network create scriptdojo-net || true
-    - docker-compose -f docker-compose.yml up -d
-  variables:
-    DOCKER_HOST: tcp://docker:2375
-    DOCKER_DRIVER: overlay2
-  tags:
-    - docker
 
 # Optional: Setup MySQL (if not handled by Docker Compose)
 setup-db:
