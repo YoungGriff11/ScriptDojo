@@ -14,6 +14,7 @@ public class UserEntity {
     private String username;
     private String password;
     private String email;
+    private String role;
 
 //    @OneToMany(mappedBy = "user")
 //    private List<FileEntity> files; // Reference to owned files, to be defined later
