@@ -3,8 +3,6 @@ package org.scriptdojo.backend.service;
 import lombok.RequiredArgsConstructor;
 import org.scriptdojo.backend.entity.UserEntity;
 import org.scriptdojo.backend.repository.UserRepository;
-//import jakarta.annotation.PostConstruct;
-//import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -13,6 +11,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import java.util.Collections;
 import java.util.Optional;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -31,7 +30,7 @@ public class UserService implements UserDetailsService {
                 Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole()))
         );
     }
-
+@Transactional
     public UserEntity saveUser(UserEntity user) {
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         return userRepository.save(user);

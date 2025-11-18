@@ -1,21 +1,26 @@
 package org.scriptdojo.backend.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-//import jakarta.persistence.OneToMany;
-import lombok.Data;
-//import java.util.List;
+import jakarta.persistence.*;
+import lombok.*;
 
 @Entity
-@Data
+@Table(name = "user")
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class UserEntity {
-    @Id
-    private Long id;
-    private String username;
-    private String password;
-    private String email;
-    private String role;
 
-//    @OneToMany(mappedBy = "user")
-//    private List<FileEntity> files; // Reference to owned files, to be defined later
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, unique = true, length = 255)
+    private String username;
+
+    @Column(nullable = false, length = 255)
+    private String password;
+
+    @Column(nullable = false, unique = true, length = 255)
+    private String email;
+
+    @Column(nullable = false, length = 50)
+    private String role = "USER";  // ← default value, never null
 }
