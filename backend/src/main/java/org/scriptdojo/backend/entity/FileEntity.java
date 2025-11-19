@@ -1,18 +1,36 @@
 package org.scriptdojo.backend.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import lombok.Data;
+import jakarta.persistence.*;
+import java.time.LocalDateTime;
+import lombok.*;
 
 @Entity
-@Data
+@Table(name = "files")
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class FileEntity {
+
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String content;
-    private String language;
-    private Long ownerId; // Temporary reference to User.id, to be updated with @ManyToOne later
-    private java.time.LocalDateTime createdAt;
-    private java.time.LocalDateTime lastModified;
+    @Column(nullable = false)
+    private String name;
+
+    @Column(columnDefinition = "TEXT")
+    private String content = "";
+
+    @Column(nullable = false)
+    private String language = "java";
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_id", nullable = false)
+    private UserEntity owner;
+
+    private LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime updatedAt = LocalDateTime.now();
+
+    @PreUpdate
+    public void preUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
 }
