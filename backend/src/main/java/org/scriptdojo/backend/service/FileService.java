@@ -20,11 +20,12 @@ public class FileService {
         return fileRepository.findByOwnerOrderByUpdatedAtDesc(currentUser);
     }
 
-    public FileEntity createFile(String name, String content) {
+    public FileEntity createFile(String name, String content, String language) {
         UserEntity owner = userService.getCurrentUser();
         FileEntity file = FileEntity.builder()
                 .name(name)
                 .content(content != null ? content : "")
+                .language(language != null ? language : "java")
                 .owner(owner)
                 .build();
         return fileRepository.save(file);

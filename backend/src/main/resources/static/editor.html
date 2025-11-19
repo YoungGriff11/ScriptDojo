@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ScriptDojo - Real-time Java Editor</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Monaco Editor -->
+    <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.47.0/min/vs/loader.js"></script>
+
+    <!-- STOMP + SockJS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #1e1e1e; color: #ddd; font-family: 'Segoe UI', sans-serif; }
+        #container { display: flex; height: 100vh; }
+        #editor { flex: 1; }
+        #sidebar { width: 260px; background: #252526; padding: 15px; overflow-y: auto; border-left: 1px solid #444; }
+        h2 { margin: 0 0 15px 0; color: #0f0; font-size: 1.4em; }
+        .user { padding: 8px; background: #333; margin: 6px 0; border-radius: 6px; font-size: 0.95em; }
+        .cursor { color: #0ff; font-weight: bold; }
+        #output { background: #000; color: #0f0; padding: 12px; margin-top: 15px; height: 180px; overflow-y: auto; border-radius: 6px; font-family: 'Courier New', monospace; }
+        button {
+            width: 100%; padding: 12px; background: #0f0; color: black; border: none; border-radius: 6px;
+            font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 1em;
+        }
+        button:hover { background: #0c0; }
+        .header { background: #007acc; color: white; padding: 10px 15px; font-size: 1.1em; }
+        .filename { font-weight: bold; }
+        .back { float: right; color: #aaa; text-decoration: none; }
+        .back:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+<div id="container">
+    <div id="editor"></div>
+    <div id="sidebar">
+        <div class="header">
+            <span id="filename">Loading...</span>
+            <a href="/dashboard.html" class="back">← Back to Files</a>
+        </div>
+        <h2>Online Users</h2>
+        <div id="users">Connecting...</div>
+        <hr style="border: 1px solid #444; margin: 15px 0;">
+        <button onclick="runCode()">Run Java Code</button>
+        <pre id="output">Click "Run Java Code" to execute</pre>
+    </div>
+</div>
+
+<script>
+    require.config({ paths: { 'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@0.47.0/min/vs' }});
+    require(['vs/editor/editor.main'], async function () {
+        // GET fileId from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const fileId = urlParams.get('fileId');
+
+        if (!fileId) {
+            document.body.innerHTML = "<h1 style='color:red; text-align:center; margin-top:100px;'>Error: No file selected</h1>";
+            return;
+        }
+
+        // Load file from backend
+        let file = { name: "Unknown.java", content: "" };
+        try {
+            const res = await fetch(`/api/files/${fileId}`, { credentials: 'include' });
+            if (res.ok) {
+                file = await res.json();
+                document.getElementById('filename').textContent = file.name;
+            } else {
+                document.getElementById('filename').textContent = "File not found";
+            }
+        } catch (e) {
+            console.error("Failed to load file", e);
+        }
+
+        // Create Monaco Editor
+        const editor = monaco.editor.create(document.getElementById('editor'), {
+            value: file.content || 'public class Main {\n    public static void main(String[] args) {\n        System.out.println("Hello from ScriptDojo!");\n    }\n}',
+            language: 'java',
+            theme: 'vs-dark',
+            fontSize: 16,
+            automaticLayout: true,
+            minimap: { enabled: false },
+            scrollBeyondLastLine: false
+        });
+
+        // WebSocket + STOMP Connection
+        const socket = new SockJS('/ws');
+        const stompClient = Stomp.over(socket);
+        stompClient.debug = null;
+
+        stompClient.connect({}, function () {
+            console.log("Connected to real-time server");
+
+            // Subscribe to text changes
+            stompClient.subscribe('/topic/room/' + fileId, function (msg) {
+                const change = JSON.parse(msg.body);
+                if (editor.getValue() !== change.content) {
+                    editor.setValue(change.content);
+                }
+            });
+
+            // Subscribe to cursor movements
+            stompClient.subscribe('/topic/room/' + fileId + '/cursors', function (msg) {
+                const cursor = JSON.parse(msg.body);
+                updateUserList(cursor);
+            });
+
+            document.getElementById('users').innerHTML = "<em>Connected!</em>";
+        }, function (error) {
+            document.getElementById('users').innerHTML = "<span style='color:red'>Disconnected</span>";
+            console.error("STOMP error", error);
+        });
+
+        // Send text changes (debounced)
+        let typingTimer;
+        editor.onDidChangeModelContent(() => {
+            clearTimeout(typingTimer);
+            typingTimer = setTimeout(() => {
+                const content = editor.getValue();
+                stompClient.send('/app/room/' + fileId + '/edit', {}, JSON.stringify({ content }));
+            }, 80);
+        });
+
+        // Send cursor position
+        editor.onDidChangeCursorPosition(e => {
+            const pos = e.position;
+            stompClient.send('/app/room/' + fileId + '/cursor', {}, JSON.stringify({
+                line: pos.lineNumber,
+                column: pos.column,
+                selection: ""
+            }));
+        });
+    });
+
+    // Update online users list
+    function updateUserList(cursor) {
+        const usersDiv = document.getElementById('users');
+        let userEl = document.querySelector(`[data-user="${cursor.username}"]`);
+        if (userEl) {
+            userEl.innerHTML = `• <span class="cursor">${cursor.username}</span> → ${cursor.line}:${cursor.column}`;
+        } else {
+            userEl = document.createElement('div');
+            userEl.setAttribute('data-user', cursor.username);
+            userEl.innerHTML = `• <span class="cursor">${cursor.username}</span> → ${cursor.line}:${cursor.column}`;
+            usersDiv.appendChild(userEl);
+        }
+    }
+
+    // Run Java code
+    function runCode() {
+        const code = editor.getValue();
+        const output = document.getElementById('output');
+        output.textContent = "Compiling...";
+
+        fetch('/api/tools/compile', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code, className: 'Main' })
+        })
+        .then(r => r.json())
+        .then(res => {
+            if (res.success) {
+                output.style.color = "#0f0";
+                output.textContent = res.output || "No output";
+            } else {
+                output.style.color = "#f44";
+                output.textContent = "ERROR:\n" + res.error;
+            }
+        })
+        .catch(err => {
+            output.style333.color = "#f44";
+            output.textContent = "Failed to connect to compiler";
+        });
+    }
+</script>
+</body>
+</html>

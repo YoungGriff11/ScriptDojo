@@ -25,21 +25,22 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable())  // ← OFF FOR NOW (will turn back on later)
+                .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**", "/signup.html", "/login.html").permitAll()
+                        .requestMatchers("/", "/welcome.html", "/login.html", "/signup.html",
+                                "/css/**", "/js/**", "/images/**").permitAll()
+                        .requestMatchers("/dashboard.html", "/editor.html", "/api/**").authenticated()
                         .anyRequest().authenticated()
                 )
                 .formLogin(form -> form
                         .loginPage("/login.html")
-                        .loginProcessingUrl("/perform_login")    // ← important
-                        .defaultSuccessUrl("/welcome.html", true)  //
-                        .failureUrl("/login.html?error=true")
+                        .loginProcessingUrl("/perform_login")
+                        .defaultSuccessUrl("/dashboard.html", true)
                         .permitAll()
                 )
                 .logout(logout -> logout
                         .logoutUrl("/perform_logout")
-                        .logoutSuccessUrl("/login.html")
+                        .logoutSuccessUrl("/welcome.html")
                         .permitAll()
                 );
         return http.build();

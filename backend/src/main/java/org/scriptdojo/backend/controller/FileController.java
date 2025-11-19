@@ -24,7 +24,7 @@ public class FileController {
 
     @PostMapping
     public FileEntity createFile(@RequestBody CreateFileRequest req) {
-        return fileService.createFile(req.name(), req.content());
+        return fileService.createFile(req.name(), req.content(), req.language());
     }
 
     @GetMapping("/{id}")
@@ -43,6 +43,8 @@ public class FileController {
         return ResponseEntity.ok().build();
     }
 
-    public record CreateFileRequest(String name, String content) {}
+
+
+    public record CreateFileRequest(String name, String content, String language) {}
     public record UpdateFileRequest(String name, String content) {}
 }
