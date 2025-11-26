@@ -48,6 +48,34 @@
         <pre id="output">Click "Run Java Code" to execute</pre>
     </div>
 </div>
+<div style="position:fixed; top:10px; right:10px; z-index:1000; background:#1e1e1e; padding:15px; border-radius:8px; border:2px solid #0f0;">
+    <button onclick="generateShareLink()" style="background:#0f0; color:black; font-weight:bold; padding:10px 20px; border:none; border-radius:6px; cursor:pointer;">
+        Generate Share Link
+    </button>
+    <div id="shareLink" style="margin-top:10px; color:#0ff; word-break:break-all; font-size:0.9em;"></div>
+</div>
+
+<script>
+    async function generateShareLink() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const fileId = urlParams.get('fileId');
+
+        const response = await fetch('/api/room/create?fileId=' + fileId, {
+            method: 'POST',
+            credentials: 'include'
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            document.getElementById('shareLink').innerHTML = `
+                <strong>Share this link:</strong><br>
+                <a href="${data.url}" target="_blank" style="color:#0ff;">${data.url}</a>
+            `;
+        } else {
+            alert("Error generating link");
+        }
+    }
+</script>
 
 <script>
     require.config({ paths: { 'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@0.47.0/min/vs' }});

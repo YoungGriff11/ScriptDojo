@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>ScriptDojo • Live Share</title>
+    <style>
+        body, html { margin:0; padding:0; height:100%; background:#1e1e1e; font-family: system-ui; overflow:hidden; }
+        #container { display:flex; height:100%; }
+        #editor { flex:1; }
+        #sidebar { width:300px; background:#252526; color:#ccc; padding:20px; box-sizing:border-box; }
+        button { background:#0f0; color:black; padding:12px; border:none; width:100%; font-weight:bold; margin-top:10px; border-radius:6px; cursor:pointer; }
+        #status { margin-top:20px; font-size:1.1em; color:#ff0; }
+        .cursor { position:absolute; background:rgba(0,255,0,0.4); width:2px; height:1.4em; pointer-events:none; z-index:10; }
+        .cursor-label { position:absolute; background:#0f0; color:black; font-size:10px; padding:2px 4px; border-radius:3px; white-space:nowrap; transform:translate(-50%, -100%); margin-top:-4px; }
+    </style>
+</head>
+<body>
+<div id="container">
+    <div id="editor"></div>
+    <div id="sidebar">
+        <h2 style="color:#0f0">ScriptDojo Live</h2>
+        <p><strong>File:</strong> <span id="fileName">Loading...</span></p>
+        <p id="status">View-only mode</p>
+        <button onclick="sayHello()">Say I'm Here</button>
+        <div id="users">Connecting...</div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.47.0/min/vs/loader.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+
+<script>
+    // === READ DATA FROM URL ===
+    const params = new URLSearchParams(window.location.search);
+    const fileId = Number(params.get('fileId'));           // ← CRITICAL: Number()
+    const roomId = params.get('roomId');
+    const fileName = decodeURIComponent(params.get('fileName') || 'Unknown.java');
+    const encodedContent = params.get('content');
+
+    let content = '// No content';
+    if (encodedContent) {
+        try {
+            content = atob(encodedContent);
+        } catch (e) {
+            content = '// Failed to decode content';
+        }
+    }
+
+    if (!fileId || !roomId) {
+        document.body.innerHTML = "<h1 style='color:red; text-align:center; margin-top:50%'>Invalid share link</h1>";
+        throw new Error("Missing fileId or roomId");
+    }
+
+    document.getElementById('fileName').textContent = fileName;
+
+    // === MONACO EDITOR ===
+    require.config({ paths: { 'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@0.47.0/min/vs' }});
+    require(['vs/editor/editor.main'], () => {
+        const editor = monaco.editor.create(document.getElementById('editor'), {
+            value: content,
+            language: 'java',
+            theme: 'vs-dark',
+            readOnly: true,
+            automaticLayout: true,
+            minimap: { enabled: false }
+        });
+
+        // === WEBSOCKET CONNECTION ===
+        const socket = new SockJS('/ws');
+        const client = Stomp.over(socket);
+        const guestName = "Guest" + Math.floor(Math.random() * 9999);
+
+        client.connect({}, () => {
+            document.getElementById('users').innerHTML = `<span style="color:#0f0">✓ ${guestName} connected</span>`;
+
+            // 1. Real-time content sync
+            client.subscribe('/topic/room/' + fileId, msg => {
+                const change = JSON.parse(msg.body);
+                if (editor.getValue() !== change.content) {
+                    editor.setValue(change.content);
+                }
+            });
+
+            // 2. Receive edit permission
+            client.subscribe('/topic/room/' + roomId + '/permissions', msg => {
+                const perm = JSON.parse(msg.body);
+                if (perm.canEdit) {
+                    editor.updateOptions({ readOnly: false });
+                    document.getElementById('status').innerHTML = "<span style='color:#0f0; font-weight:bold;'>✓ You can now edit!</span>";
+                }
+            });
+
+            // 3. Cursor tracking (receive)
+            client.subscribe('/topic/room/' + fileId + '/cursors', msg => {
+                const cursor = JSON.parse(msg.body);
+                console.log("Cursor:", cursor);
+                // Simple visual cursor (you can enhance later)
+                let el = document.getElementById('cursor-' + cursor.username);
+                if (!el) {
+                    el = document.createElement('div');
+                    el.id = 'cursor-' + cursor.username;
+                    el.className = 'cursor';
+                    const label = document.createElement('div');
+                    label.className = 'cursor-label';
+                    label.textContent = cursor.username;
+                    el.appendChild(label);
+                    document.getElementById('editor').appendChild(el);
+                }
+                // Position logic (basic)
+                const lineHeight = 19;
+                el.style.top = (cursor.line * lineHeight) + 'px';
+                el.style.left = (cursor.column * 7.5) + 'px'; // approx
+            });
+
+            // 4. Send own cursor
+            editor.onDidChangeCursorPosition(e => {
+                client.send('/app/room/' + fileId + '/cursor', {}, JSON.stringify({
+                    username: guestName,
+                    line: e.position.lineNumber,
+                    column: e.position.column
+                }));
+            });
+
+        }, () => {
+            document.getElementById('users').innerHTML = "<span style='color:red'>Connection failed</span>";
+        });
+    });
+
+    function sayHello() {
+        alert(`Hi! I'm ${guestName} — waiting for edit permission!`);
+    }
+</script>
+</body>
+</html>

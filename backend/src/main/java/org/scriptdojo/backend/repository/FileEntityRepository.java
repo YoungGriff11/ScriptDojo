@@ -8,4 +8,5 @@ import java.util.*;
 public interface FileEntityRepository extends JpaRepository<FileEntity, Long> {
     List<FileEntity> findByOwner(UserEntity owner);
     List<FileEntity> findByOwnerOrderByUpdatedAtDesc(UserEntity owner);
+    Optional<FileEntity> findByIdAndOwnerId(Long id, Long ownerId);
 }
