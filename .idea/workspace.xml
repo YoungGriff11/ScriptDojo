@@ -5,18 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="55cddaad-c591-45a7-bea1-5228269cadae" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/controller/RoomController.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/entity/RoomEntity.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/repository/RoomRepository.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/service/dto/CreateRoomResponse.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/src/main/resources/static/room-guest.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/config/SecurityConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/config/SecurityConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/controller/CollaborationController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/controller/CollaborationController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/repository/FileEntityRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/repository/FileEntityRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/service/FileService.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/service/FileService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/service/dto/CursorMove.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/service/dto/CursorMove.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/service/dto/TextChange.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/service/dto/TextChange.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend/src/main/resources/static/editor.html" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/resources/static/editor.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
