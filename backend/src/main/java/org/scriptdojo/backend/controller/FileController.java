@@ -1,50 +1,57 @@
 package org.scriptdojo.backend.controller;
 
+import org.scriptdojo.backend.service.dto.FileDTO;
 import org.scriptdojo.backend.entity.FileEntity;
 import org.scriptdojo.backend.service.FileService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
-import org.scriptdojo.backend.entity.UserEntity;
-
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/files")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "http://localhost:3000")
 public class FileController {
 
     private final FileService fileService;
 
     @GetMapping
-    public List<FileEntity> getMyFiles() {
-        return fileService.getMyFiles();
-    }
-
-    @PostMapping
-    public FileEntity createFile(@RequestBody CreateFileRequest req) {
-        return fileService.createFile(req.name(), req.content(), req.language());
+    public ResponseEntity<List<FileDTO>> getUserFiles() {
+        List<FileEntity> files = fileService.getUserFiles();
+        List<FileDTO> dtos = files.stream()
+                .map(fileService::toDTO)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(dtos);
     }
 
     @GetMapping("/{id}")
-    public FileEntity getFile(@PathVariable Long id) {
-        return fileService.getFile(id);
+    public ResponseEntity<FileDTO> getFile(@PathVariable Long id) {
+        FileEntity file = fileService.getFileById(id);
+        return ResponseEntity.ok(fileService.toDTO(file));
+    }
+
+    @PostMapping
+    public ResponseEntity<FileDTO> createFile(@RequestBody FileDTO dto) {
+        FileEntity created = fileService.createFile(dto.name(), dto.content(), dto.language());
+        return ResponseEntity.ok(fileService.toDTO(created));
     }
 
     @PutMapping("/{id}")
-    public FileEntity updateFile(@PathVariable Long id, @RequestBody UpdateFileRequest req) {
-        return fileService.updateFile(id, req.name(), req.content());
+    public ResponseEntity<FileDTO> updateFile(@PathVariable Long id, @RequestBody FileDTO dto) {
+        FileEntity updated = fileService.updateFile(id, dto.name(), dto.content());
+        return ResponseEntity.ok(fileService.toDTO(updated));
+    }
+
+    @PutMapping("/{id}/content")
+    public ResponseEntity<FileDTO> updateContent(@PathVariable Long id, @RequestBody String newContent) {
+        FileEntity updated = fileService.updateFile(id, newContent);
+        return ResponseEntity.ok(fileService.toDTO(updated));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteFile(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteFile(@PathVariable Long id) {
         fileService.deleteFile(id);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.noContent().build();
     }
-
-
-
-    public record CreateFileRequest(String name, String content, String language) {}
-    public record UpdateFileRequest(String name, String content) {}
 }

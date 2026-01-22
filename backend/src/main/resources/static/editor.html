@@ -5,31 +5,122 @@
     <title>ScriptDojo - Real-time Java Editor</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <!-- Monaco Editor -->
-    <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.47.0/min/vs/loader.js"></script>
-
-    <!-- STOMP + SockJS -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
-
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #1e1e1e; color: #ddd; font-family: 'Segoe UI', sans-serif; }
-        #container { display: flex; height: 100vh; }
-        #editor { flex: 1; }
-        #sidebar { width: 260px; background: #252526; padding: 15px; overflow-y: auto; border-left: 1px solid #444; }
-        h2 { margin: 0 0 15px 0; color: #0f0; font-size: 1.4em; }
-        .user { padding: 8px; background: #333; margin: 6px 0; border-radius: 6px; font-size: 0.95em; }
-        .cursor { color: #0ff; font-weight: bold; }
-        #output { background: #000; color: #0f0; padding: 12px; margin-top: 15px; height: 180px; overflow-y: auto; border-radius: 6px; font-family: 'Courier New', monospace; }
-        button {
-            width: 100%; padding: 12px; background: #0f0; color: black; border: none; border-radius: 6px;
-            font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 1em;
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            overflow: hidden;
+            background: #1e1e1e;
+            color: #ddd;
+            font-family: 'Segoe UI', sans-serif;
         }
-        button:hover { background: #0c0; }
-        .header { background: #007acc; color: white; padding: 10px 15px; font-size: 1.1em; }
-        .filename { font-weight: bold; }
-        .back { float: right; color: #aaa; text-decoration: none; }
-        .back:hover { text-decoration: underline; }
+        #container {
+            display: flex;
+            height: 100vh;
+        }
+        #editor {
+            flex: 1;
+        }
+        #sidebar {
+            width: 260px;
+            background: #252526;
+            padding: 15px;
+            overflow-y: auto;
+            border-left: 1px solid #444;
+        }
+        h2 {
+            margin: 0 0 15px 0;
+            color: #0f0;
+            font-size: 1.4em;
+        }
+        .user {
+            padding: 8px;
+            background: #333;
+            margin: 6px 0;
+            border-radius: 6px;
+            font-size: 0.95em;
+        }
+        .cursor {
+            color: #0ff;
+            font-weight: bold;
+        }
+        #output {
+            background: #000;
+            color: #0f0;
+            padding: 12px;
+            margin-top: 15px;
+            height: 180px;
+            overflow-y: auto;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #0f0;
+            color: black;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+            font-size: 1em;
+        }
+        button:hover {
+            background: #0c0;
+        }
+        .header {
+            background: #007acc;
+            color: white;
+            padding: 10px 15px;
+            font-size: 1.1em;
+        }
+        .filename {
+            font-weight: bold;
+        }
+        .back {
+            float: right;
+            color: #aaa;
+            text-decoration: none;
+        }
+        .back:hover {
+            text-decoration: underline;
+        }
+        #shareSection {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            background: #1e1e1e;
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #0f0;
+            max-width: 400px;
+        }
+        #shareSection button {
+            margin: 0;
+        }
+        #shareLink {
+            margin-top: 10px;
+            color: #0ff;
+            word-break: break-all;
+            font-size: 0.9em;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        .status-connected {
+            background: #0f0;
+        }
+        .status-disconnected {
+            background: #f44;
+        }
     </style>
 </head>
 <body>
@@ -41,23 +132,39 @@
             <span id="filename">Loading...</span>
             <a href="/dashboard.html" class="back">Back to Files</a>
         </div>
-        <h2>Online Users</h2>
+        <h2>
+            <span id="connectionStatus" class="status-indicator status-disconnected"></span>
+            Online Users
+        </h2>
         <div id="users">Connecting...</div>
         <hr style="border: 1px solid #444; margin: 15px 0;">
         <button onclick="runCode()">Run Java Code</button>
-        <pre id="output">Click "Run Java Code" to execute</pre>
+        <pre id="output">Click "Run Java Code" to execute (not implemented yet)</pre>
     </div>
 </div>
 
-<!-- Share Link Button -->
-<div style="position:fixed; top:10px; right:10px; z-index:1000; background:#1e1e1e; padding:15px; border-radius:8px; border:2px solid #0f0;">
-    <button onclick="generateShareLink()" style="background:#0f0; color:black; font-weight:bold; padding:10px 20px; border:none; border-radius:6px; cursor:pointer;">
-        Generate Share Link
-    </button>
-    <div id="shareLink" style="margin-top:10px; color:#0ff; word-break:break-all; font-size:0.9em;"></div>
+<!-- Share Link Section -->
+<div id="shareSection">
+    <button onclick="generateShareLink()">Generate Share Link</button>
+    <div id="shareLink"></div>
 </div>
 
+<!-- ========================================
+     LOAD LIBRARIES FIRST - CRITICAL ORDER
+     ======================================== -->
+
+<!-- 1. SockJS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+
+<!-- 2. STOMP -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+
+<!-- 3. Monaco Loader -->
+<script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.47.0/min/vs/loader.js"></script>
+
+<!-- 4. Application Code -->
 <script>
+    // GENERATE SHARE LINK
     async function generateShareLink() {
         const urlParams = new URLSearchParams(window.location.search);
         const fileId = urlParams.get('fileId');
@@ -78,9 +185,15 @@
             alert("Failed to generate link");
         }
     }
-</script>
 
-<script>
+    // RUN CODE (placeholder)
+    function runCode() {
+        const output = document.getElementById('output');
+        output.style.color = "#ff0";
+        output.textContent = "⚠️ Java compiler not implemented yet (Feature #5 coming soon)";
+    }
+
+    // MONACO EDITOR + WEBSOCKET
     require.config({ paths: { 'vs': 'https://cdn.jsdelivr.net/npm/monaco-editor@0.47.0/min/vs' }});
     require(['vs/editor/editor.main'], async function () {
         const urlParams = new URLSearchParams(window.location.search);
@@ -91,23 +204,31 @@
             return;
         }
 
-        // LOAD FILE FROM SERVER — THIS IS THE ONLY SOURCE OF TRUTH
+        console.log("════════════════════════════════════════");
+        console.log("🚀 EDITOR INITIALIZING");
+        console.log("   File ID:", fileId);
+        console.log("════════════════════════════════════════");
+
+        // LOAD FILE FROM SERVER
         let file = { name: "Loading...", content: "" };
         try {
             const res = await fetch(`/api/files/${fileId}`, { credentials: 'include' });
             if (res.ok) {
                 file = await res.json();
+                console.log("✅ File loaded:", file.name, "(" + file.content.length + " chars)");
+            } else {
+                console.error("❌ File load failed:", res.status);
             }
         } catch (e) {
-            console.error("Failed to load file:", e);
+            console.error("❌ Failed to load file:", e);
         }
 
         // SET FILENAME
         document.getElementById('filename').textContent = file.name || "Untitled.java";
 
-        // CREATE EDITOR WITH REAL CONTENT — NO DEFAULT CODE
+        // CREATE MONACO EDITOR
         const editor = monaco.editor.create(document.getElementById('editor'), {
-            value: file.content || '',  // ← NEVER DEFAULT CODE
+            value: file.content || "// Empty file",
             language: 'java',
             theme: 'vs-dark',
             fontSize: 16,
@@ -116,95 +237,188 @@
             scrollBeyondLastLine: false
         });
 
+        console.log("✅ Monaco Editor created");
+
+        // GET CURRENT USER
+        let username = "Host";
+        try {
+            const userRes = await fetch('/api/user/me', { credentials: 'include' });
+            if (userRes.ok) {
+                const userData = await userRes.json();
+                username = userData.username;
+                console.log("👤 Logged in as:", username);
+            }
+        } catch (e) {
+            console.warn("⚠️ Could not fetch username:", e);
+        }
+
         // WEBSOCKET CONNECTION
+        console.log("════════════════════════════════════════");
+        console.log("🔌 Initializing WebSocket...");
+
         const socket = new SockJS('/ws');
         const stompClient = Stomp.over(socket);
-        stompClient.debug = null;
 
-        const username = "Conor"; // You can get from backend later
+        // Enable debug for troubleshooting
+        stompClient.debug = function(str) {
+            console.log('🔧 STOMP Debug:', str);
+        };
 
-        stompClient.connect({}, function () {
-            console.log("WebSocket connected");
+        let isConnected = false;
 
-            // RECEIVE TEXT CHANGES
-            stompClient.subscribe('/topic/room/' + fileId, function (msg) {
-                const change = JSON.parse(msg.body);
-                if (editor.getValue() !== change.content) {
-                    editor.setValue(change.content);
+        stompClient.connect({}, function (frame) {
+            isConnected = true;
+
+            console.log("════════════════════════════════════════");
+            console.log("✅ WEBSOCKET CONNECTED");
+            console.log("   Session:", frame.headers['session']);
+            console.log("   User:", username);
+            console.log("════════════════════════════════════════");
+
+            // Update UI
+            document.getElementById('connectionStatus').className = 'status-indicator status-connected';
+            document.getElementById('users').innerHTML = `<em>✅ Connected as <strong>${username}</strong></em>`;
+
+            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            // SUBSCRIBE TO TEXT CHANGES
+            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            const textSubscription = stompClient.subscribe('/topic/room/' + fileId, function (message) {
+                console.log("════════════════════════════════════════");
+                console.log("📥 TEXT UPDATE RECEIVED");
+                console.log("   Topic: /topic/room/" + fileId);
+
+                try {
+                    const change = JSON.parse(message.body);
+                    console.log("   Content length:", change.content.length);
+                    console.log("   First 100 chars:", change.content.substring(0, Math.min(100, change.content.length)));
+
+                    const currentContent = editor.getValue();
+
+                    if (currentContent !== change.content) {
+                        console.log("✏️ UPDATING EDITOR (content differs)");
+                        const position = editor.getPosition();
+                        editor.setValue(change.content);
+                        if (position) {
+                            editor.setPosition(position);
+                            console.log("   Cursor restored to", position.lineNumber + ":" + position.column);
+                        }
+                    } else {
+                        console.log("⏭️ SKIPPING UPDATE (content identical - avoiding loop)");
+                    }
+                } catch (e) {
+                    console.error("❌ Failed to parse message:", e);
+                }
+
+                console.log("════════════════════════════════════════");
+            });
+
+            console.log("📻 Subscribed to: /topic/room/" + fileId);
+            console.log("   Subscription ID:", textSubscription.id);
+
+            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            // SUBSCRIBE TO CURSOR UPDATES
+            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            const cursorSubscription = stompClient.subscribe('/topic/room/' + fileId + '/cursors', function (message) {
+                try {
+                    const cursor = JSON.parse(message.body);
+                    console.log("👆 Cursor update:", cursor.username, "at", cursor.line + ":" + cursor.column);
+                    updateUserList(cursor);
+                } catch (e) {
+                    console.error("❌ Failed to parse cursor message:", e);
                 }
             });
 
-            // RECEIVE CURSORS
-            stompClient.subscribe('/topic/room/' + fileId + '/cursors', function (msg) {
-                const cursor = JSON.parse(msg.body);
-                updateUserList(cursor);
-            });
+            console.log("📻 Subscribed to: /topic/room/" + fileId + "/cursors");
+            console.log("   Subscription ID:", cursorSubscription.id);
 
-            document.getElementById('users').innerHTML = "<em>You are connected</em>";
-
-            // SEND TEXT CHANGES
+            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            // SEND TEXT CHANGES (DEBOUNCED)
+            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
             let typingTimer;
+            let lastSentContent = editor.getValue();
+
             editor.onDidChangeModelContent(() => {
                 clearTimeout(typingTimer);
                 typingTimer = setTimeout(() => {
                     const content = editor.getValue();
-                    stompClient.send('/app/room/' + fileId + '/edit', {}, JSON.stringify({ content }));
-                }, 80);
+
+                    // Only send if content actually changed
+                    if (content !== lastSentContent) {
+                        console.log("════════════════════════════════════════");
+                        console.log("📤 SENDING TEXT UPDATE");
+                        console.log("   Destination: /app/room/" + fileId + "/edit");
+                        console.log("   Content length:", content.length);
+                        console.log("   First 100 chars:", content.substring(0, Math.min(100, content.length)));
+
+                        try {
+                            stompClient.send(
+                                '/app/room/' + fileId + '/edit',
+                                {},
+                                JSON.stringify({ content: content })
+                            );
+                            lastSentContent = content;
+                            console.log("✅ Update sent successfully");
+                        } catch (e) {
+                            console.error("❌ Failed to send update:", e);
+                        }
+
+                        console.log("════════════════════════════════════════");
+                    }
+                }, 300); // 300ms debounce
             });
 
+            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
             // SEND CURSOR POSITION
+            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
             editor.onDidChangeCursorPosition(e => {
-                stompClient.send('/app/room/' + fileId + '/cursor', {}, JSON.stringify({
-                    username: username,
-                    line: e.position.lineNumber,
-                    column: e.position.column
-                }));
+                if (isConnected) {
+                    try {
+                        stompClient.send(
+                            '/app/room/' + fileId + '/cursor',
+                            {},
+                            JSON.stringify({
+                                username: username,
+                                line: e.position.lineNumber,
+                                column: e.position.column
+                            })
+                        );
+                    } catch (err) {
+                        console.error("❌ Failed to send cursor:", err);
+                    }
+                }
             });
+
+            console.log("✅ Event listeners attached");
 
         }, function (error) {
-            document.getElementById('users').innerHTML = "<span style='color:red'>Disconnected</span>";
-            console.error("STOMP error:", error);
+            isConnected = false;
+
+            console.error("════════════════════════════════════════");
+            console.error("❌ WEBSOCKET CONNECTION FAILED");
+            console.error("   Error:", error);
+            console.error("════════════════════════════════════════");
+
+            document.getElementById('connectionStatus').className = 'status-indicator status-disconnected';
+            document.getElementById('users').innerHTML = "<span style='color:red'>❌ Connection Failed</span>";
         });
 
-        // Update user list with cursor
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // HELPER FUNCTIONS
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
         function updateUserList(cursor) {
             const usersDiv = document.getElementById('users');
             let userEl = document.querySelector(`[data-user="${cursor.username}"]`);
+
             if (!userEl) {
                 userEl = document.createElement('div');
                 userEl.setAttribute('data-user', cursor.username);
+                userEl.className = 'user';
                 usersDiv.appendChild(userEl);
             }
-            userEl.innerHTML = `• <span class="cursor">${cursor.username}</span> → ${cursor.line}:${cursor.column}`;
+
+            userEl.innerHTML = `• <span class="cursor">${cursor.username}</span> → Line ${cursor.line}, Col ${cursor.column}`;
         }
-
-        // Run code function (unchanged)
-        window.runCode = function() {
-            const code = editor.getValue();
-            const output = document.getElementById('output');
-            output.textContent = "Compiling...";
-
-            fetch('/api/tools/compile', {
-                method: 'POST',
-                credentials: 'include',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ code, className: 'Main' })
-            })
-            .then(r => r.json())
-            .then(res => {
-                if (res.success) {
-                    output.style.color = "#0f0";
-                    output.textContent = res.output || "No output";
-                } else {
-                    output.style.color = "#f44";
-                    output.textContent = "ERROR:\n" + res.error;
-                }
-            })
-            .catch(() => {
-                output.style.color = "#f44";
-                output.textContent = "Failed to connect to compiler";
-            });
-        };
     });
 </script>
 </body>

@@ -1,80 +1,109 @@
 package org.scriptdojo.backend.service;
 
-import lombok.RequiredArgsConstructor;
+import org.scriptdojo.backend.service.dto.FileDTO;
 import org.scriptdojo.backend.entity.FileEntity;
-import org.scriptdojo.backend.entity.UserEntity;
 import org.scriptdojo.backend.repository.FileEntityRepository;
+import org.scriptdojo.backend.security.CustomUserDetails;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-import java.time.LocalDateTime;
-import java.util.List;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class FileService {
 
     private final FileEntityRepository fileRepository;
-    private final UserService userService;
 
-    public List<FileEntity> getMyFiles() {
-        UserEntity currentUser = userService.getCurrentUser();
-        return fileRepository.findByOwnerOrderByUpdatedAtDesc(currentUser);
+    private CustomUserDetails getCurrentUser() {
+        return (CustomUserDetails) SecurityContextHolder.getContext()
+                .getAuthentication()
+                .getPrincipal();
     }
 
+    public List<FileEntity> getUserFiles() {
+        Long userId = getCurrentUser().getId();
+        return fileRepository.findByOwnerIdOrderByUpdatedAtDesc(userId);
+    }
+
+    public FileEntity getFileById(Long id) {
+        return fileRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "File not found"));
+    }
+
+    @Transactional
     public FileEntity createFile(String name, String content, String language) {
-        UserEntity owner = userService.getCurrentUser();
-        FileEntity file = FileEntity.builder()
-                .name(name)
-                .content(content != null ? content : "")
-                .language(language != null ? language : "java")
-                .owner(owner)
-                .build();
-        return fileRepository.save(file);
-    }
-
-    public FileEntity getFile(Long id) {
-        FileEntity file = fileRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("File not found: " + id));
-
-        if (!file.getOwner().equals(userService.getCurrentUser())) {
-            throw new RuntimeException("Access denied");
-        }
-        return file;
-    }
-
-    // 1. FOR COLLABORATION (real-time editing in room)
-    public FileEntity updateFile(Long fileId, String content) {
-        FileEntity file = fileRepository.findById(fileId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "File not found"));
-        file.setContent(content);
-        file.setUpdatedAt(LocalDateTime.now());
-        return fileRepository.save(file);
-    }
-
-    // 2. FOR REST API (rename + update content from dashboard)
-    public FileEntity updateFile(Long fileId, String name, String content) {
-        FileEntity file = fileRepository.findById(fileId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "File not found"));
+        FileEntity file = new FileEntity();
         file.setName(name);
-        file.setContent(content);
+        file.setContent(content != null ? content : "");
+        file.setLanguage(language != null ? language : "java");
+        file.setOwner(getCurrentUser().getUser());
+        file.setCreatedAt(LocalDateTime.now());
         file.setUpdatedAt(LocalDateTime.now());
+
+        FileEntity saved = fileRepository.save(file);
+        log.info("✅ File created: ID={}, Name={}", saved.getId(), saved.getName());
+
+        return saved;
+    }
+
+    @Transactional
+    public FileEntity updateFile(Long id, String newContent) {
+        log.info("💾 Updating file ID={}", id);
+        log.info("   New content length: {} characters", newContent != null ? newContent.length() : 0);
+
+        FileEntity file = getFileById(id);
+
+        String oldContent = file.getContent();
+        file.setContent(newContent != null ? newContent : "");
+        file.setUpdatedAt(LocalDateTime.now());
+
+        FileEntity saved = fileRepository.save(file);
+
+        log.info("✅ File updated successfully");
+        log.info("   Old length: {} → New length: {}",
+                oldContent != null ? oldContent.length() : 0,
+                saved.getContent().length());
+
+        return saved;
+    }
+
+    @Transactional
+    public FileEntity updateFile(Long id, String newName, String newContent) {
+        FileEntity file = getFileById(id);
+
+        if (newName != null && !newName.isBlank()) {
+            file.setName(newName);
+        }
+        if (newContent != null) {
+            file.setContent(newContent);
+        }
+        file.setUpdatedAt(LocalDateTime.now());
+
         return fileRepository.save(file);
     }
 
+    @Transactional
     public void deleteFile(Long id) {
-        FileEntity file = getFile(id);
+        FileEntity file = getFileById(id);
         fileRepository.delete(file);
+        log.info("🗑️ File deleted: ID={}, Name={}", id, file.getName());
     }
 
-    public FileEntity getFileById(Long fileId) {
-        return fileRepository.findById(fileId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "File not found with id: " + fileId));
-    }
-
-    public FileEntity getFileByIdAndOwner(Long fileId, Long ownerId) {
-        return fileRepository.findByIdAndOwnerId(fileId, ownerId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "You don't have access to this file"));
+    public FileDTO toDTO(FileEntity entity) {
+        return new FileDTO(
+                entity.getId(),
+                entity.getName(),
+                entity.getContent(),
+                entity.getLanguage(),
+                entity.getOwner().getId(),
+                entity.getOwner().getUsername()
+        );
     }
 }

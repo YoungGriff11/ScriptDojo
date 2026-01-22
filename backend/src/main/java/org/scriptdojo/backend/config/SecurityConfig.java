@@ -1,62 +1,74 @@
 package org.scriptdojo.backend.config;
 
+import org.scriptdojo.backend.security.CustomUserDetailsService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.beans.factory.annotation.Autowired;
 
 @Configuration
 @EnableWebSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final UserDetailsService userDetailsService;
-    private final PasswordEncoder passwordEncoder;
-
-    @Autowired
-    public SecurityConfig(UserDetailsService userDetailsService, PasswordEncoder passwordEncoder) {
-        this.userDetailsService = userDetailsService;
-        this.passwordEncoder = passwordEncoder;
-    }
+    private final CustomUserDetailsService customUserDetailsService;
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable())
+                .csrf(csrf -> csrf.disable())  // Disabled for WebSocket compatibility
+
                 .authorizeHttpRequests(auth -> auth
-                        // === PUBLIC ENDPOINTS (anyone can access) ===
                         .requestMatchers(
-                                "/",
-                                "/welcome.html", "/login.html", "/signup.html",
-                                "/css/**", "/js/**", "/images/**",
-                                "/room/**",                  // CRITICAL: share links
-                                "/room-guest.html",          // CRITICAL: guest editor page
-                                "/ws/**",                    // WebSocket endpoint
-                                "/api/room/create",          // generate share link
-                                "/api/room/*/grant-edit"     // future permission endpoint
+                                "/login.html",
+                                "/signup.html",
+                                "/api/auth/**",
+                                "/ws/**",              // ← WebSocket endpoint must be public
+                                "/room-guest.html",    // ← Guest page must be public
+                                "/room/**",            // ← Room join endpoint must be public
+                                "/static/**"
                         ).permitAll()
-
-                        // PROTECTED ENDPOINTS (require login)
-                        .requestMatchers("/dashboard.html", "/editor.html", "/api/files/**").authenticated()
-
-                        // Everything else requires authentication
                         .anyRequest().authenticated()
                 )
+
                 .formLogin(form -> form
                         .loginPage("/login.html")
                         .loginProcessingUrl("/perform_login")
-                        .defaultSuccessUrl("/dashboard.html", true)    // ← now welcome page, not dashboard
+                        .defaultSuccessUrl("/dashboard.html", true)
+                        .failureUrl("/login.html?error=true")
                         .permitAll()
                 )
+
                 .logout(logout -> logout
-                        .logoutUrl("/perform_logout")
-                        .logoutSuccessUrl("/welcome.html")
                         .permitAll()
+                        .logoutSuccessUrl("/login.html")
                 );
 
         return http.build();
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(
+            HttpSecurity http,
+            AuthenticationConfiguration authenticationConfiguration) throws Exception {
+
+        AuthenticationManagerBuilder authBuilder = http.getSharedObject(AuthenticationManagerBuilder.class);
+        authBuilder
+                .userDetailsService(customUserDetailsService)
+                .passwordEncoder(passwordEncoder());
+
+        return authBuilder.build();
     }
 }
