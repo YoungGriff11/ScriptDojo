@@ -47,7 +47,7 @@ public class CollaborationController {
 
         // Save to database
         try {
-            fileService.updateFile(fileId, change.content());
+            fileService.updateFileContent(fileId, change.content());
             log.info("✅ Database update successful");
         } catch (Exception e) {
             log.error("❌ Database update FAILED: {}", e.getMessage(), e);

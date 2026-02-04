@@ -23,7 +23,7 @@
             flex: 1;
         }
         #sidebar {
-            width: 260px;
+            width: 300px;
             background: #252526;
             padding: 15px;
             overflow-y: auto;
@@ -90,7 +90,7 @@
         }
         #shareSection {
             position: fixed;
-            top: 10px;
+            bottom: 10px;
             right: 10px;
             z-index: 1000;
             background: #1e1e1e;
@@ -121,6 +121,58 @@
         .status-disconnected {
             background: #f44;
         }
+        .user-item {
+            padding: 10px;
+            background: #333;
+            margin: 8px 0;
+            border-radius: 6px;
+            font-size: 0.9em;
+        }
+        .user-name {
+            color: #0ff;
+            font-weight: bold;
+        }
+        .user-role {
+            color: #888;
+            font-size: 0.85em;
+            margin-left: 5px;
+        }
+        .grant-btn {
+            background: #0f0;
+            color: black;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            margin-top: 5px;
+            width: 100%;
+        }
+        .grant-btn:hover {
+            background: #0c0;
+        }
+        .revoke-btn {
+            background: #f44;
+            color: white;
+        }
+        .revoke-btn:hover {
+            background: #c33;
+        }
+        .permission-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.75em;
+            margin-left: 5px;
+        }
+        .badge-view {
+            background: #666;
+            color: white;
+        }
+        .badge-edit {
+            background: #0f0;
+            color: black;
+        }
     </style>
 </head>
 <body>
@@ -132,12 +184,19 @@
             <span id="filename">Loading...</span>
             <a href="/dashboard.html" class="back">Back to Files</a>
         </div>
+
         <h2>
             <span id="connectionStatus" class="status-indicator status-disconnected"></span>
             Online Users
         </h2>
-        <div id="users">Connecting...</div>
+
+        <!-- Online Users List -->
+        <div id="users">
+            <em>✅ Connected as <strong id="hostUsername">...</strong> (Host)</em>
+        </div>
+
         <hr style="border: 1px solid #444; margin: 15px 0;">
+
         <button onclick="runCode()">Run Java Code</button>
         <pre id="output">Click "Run Java Code" to execute (not implemented yet)</pre>
     </div>
@@ -277,7 +336,7 @@
 
             // Update UI
             document.getElementById('connectionStatus').className = 'status-indicator status-connected';
-            document.getElementById('users').innerHTML = `<em>✅ Connected as <strong>${username}</strong></em>`;
+            document.getElementById('hostUsername').textContent = username;
 
             // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
             // SUBSCRIBE TO TEXT CHANGES
@@ -330,6 +389,22 @@
 
             console.log("📻 Subscribed to: /topic/room/" + fileId + "/cursors");
             console.log("   Subscription ID:", cursorSubscription.id);
+
+            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            // SUBSCRIBE TO ACTIVE USERS
+            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            const usersSubscription = stompClient.subscribe('/topic/room/' + fileId + '/users', function (message) {
+                try {
+                    const data = JSON.parse(message.body);
+                    console.log("👥 Active users update:", data);
+                    updateUsersList(data.users);
+                } catch (e) {
+                    console.error("❌ Failed to parse users message:", e);
+                }
+            });
+
+            console.log("📻 Subscribed to: /topic/room/" + fileId + "/users");
+            console.log("   Subscription ID:", usersSubscription.id);
 
             // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
             // SEND TEXT CHANGES (DEBOUNCED)
@@ -399,7 +474,6 @@
             console.error("════════════════════════════════════════");
 
             document.getElementById('connectionStatus').className = 'status-indicator status-disconnected';
-            document.getElementById('users').innerHTML = "<span style='color:red'>❌ Connection Failed</span>";
         });
 
         // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -407,19 +481,156 @@
         // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
         function updateUserList(cursor) {
-            const usersDiv = document.getElementById('users');
-            let userEl = document.querySelector(`[data-user="${cursor.username}"]`);
+            // Legacy cursor tracking - keeping for backwards compatibility
+            console.log("Cursor position tracked:", cursor);
+        }
 
-            if (!userEl) {
-                userEl = document.createElement('div');
-                userEl.setAttribute('data-user', cursor.username);
-                userEl.className = 'user';
-                usersDiv.appendChild(userEl);
+        function updateUsersList(users) {
+            const usersDiv = document.getElementById('users');
+
+            // Clear existing (except host indicator)
+            usersDiv.innerHTML = `<em>✅ Connected as <strong>${username}</strong> (Host)</em>`;
+
+            // Filter out the host from the list
+            const guests = Array.from(users).filter(u => u !== username);
+
+            if (guests.length === 0) {
+                const noGuests = document.createElement('div');
+                noGuests.style.color = '#888';
+                noGuests.style.marginTop = '10px';
+                noGuests.innerHTML = '<em>No guests connected yet</em>';
+                usersDiv.appendChild(noGuests);
+                return;
             }
 
-            userEl.innerHTML = `• <span class="cursor">${cursor.username}</span> → Line ${cursor.line}, Col ${cursor.column}`;
+            // Show each guest
+            guests.forEach(guestName => {
+                const userDiv = document.createElement('div');
+                userDiv.className = 'user-item';
+                userDiv.setAttribute('data-guest', guestName);
+
+                userDiv.innerHTML = `
+                    <div>
+                        <span class="user-name">👤 ${guestName}</span>
+                        <span class="permission-badge badge-view" id="badge-${guestName}">VIEW</span>
+                    </div>
+                    <button class="grant-btn" onclick="grantEdit('${guestName}')">
+                        Grant Edit Permission
+                    </button>
+                `;
+
+                usersDiv.appendChild(userDiv);
+            });
+
+            console.log("✅ Updated users list:", guests);
         }
     });
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // GRANT EDIT PERMISSION
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    async function grantEdit(guestName) {
+        console.log("🔓 Granting edit permission to:", guestName);
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const fileId = urlParams.get('fileId');
+
+        try {
+            const response = await fetch('/api/permissions/grant-edit', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                credentials: 'include',
+                body: new URLSearchParams({
+                    fileId: fileId,
+                    guestName: guestName
+                })
+            });
+
+            if (response.ok) {
+                console.log("✅ Permission granted successfully");
+
+                // Update UI
+                const badge = document.getElementById('badge-' + guestName);
+                if (badge) {
+                    badge.textContent = 'EDIT';
+                    badge.className = 'permission-badge badge-edit';
+                }
+
+                // Change button to revoke
+                const userDiv = document.querySelector(`[data-guest="${guestName}"]`);
+                if (userDiv) {
+                    const btn = userDiv.querySelector('button');
+                    btn.textContent = 'Revoke Edit Permission';
+                    btn.className = 'grant-btn revoke-btn';
+                    btn.onclick = () => revokeEdit(guestName);
+                }
+
+                alert(`✅ ${guestName} can now edit the file!`);
+            } else {
+                console.error("❌ Failed to grant permission:", response.status);
+                alert("Failed to grant permission");
+            }
+        } catch (error) {
+            console.error("❌ Error granting permission:", error);
+            alert("Error granting permission");
+        }
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // REVOKE EDIT PERMISSION
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    async function revokeEdit(guestName) {
+        console.log("🔒 Revoking edit permission from:", guestName);
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const fileId = urlParams.get('fileId');
+
+        try {
+            const response = await fetch('/api/permissions/revoke-edit', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                credentials: 'include',
+                body: new URLSearchParams({
+                    fileId: fileId,
+                    guestName: guestName
+                })
+            });
+
+            if (response.ok) {
+                console.log("✅ Permission revoked successfully");
+
+                // Update UI
+                const badge = document.getElementById('badge-' + guestName);
+                if (badge) {
+                    badge.textContent = 'VIEW';
+                    badge.className = 'permission-badge badge-view';
+                }
+
+                // Change button back to grant
+                const userDiv = document.querySelector(`[data-guest="${guestName}"]`);
+                if (userDiv) {
+                    const btn = userDiv.querySelector('button');
+                    btn.textContent = 'Grant Edit Permission';
+                    btn.className = 'grant-btn';
+                    btn.onclick = () => grantEdit(guestName);
+                }
+
+                alert(`🔒 ${guestName} is now view-only`);
+            } else {
+                console.error("❌ Failed to revoke permission:", response.status);
+                alert("Failed to revoke permission");
+            }
+        } catch (error) {
+            console.error("❌ Error revoking permission:", error);
+            alert("Error revoking permission");
+        }
+    }
 </script>
 </body>
 </html>

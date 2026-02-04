@@ -48,7 +48,17 @@
         #status {
             margin-top:20px;
             font-size:1.1em;
-            color:#ff0;
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+        }
+        .status-view {
+            background: #444;
+            color: #ff0;
+        }
+        .status-edit {
+            background: #0f0;
+            color: black;
         }
         .info {
             background:#333;
@@ -85,7 +95,7 @@
         <div class="info">
             <strong>Guest:</strong> <span id="guestName">...</span>
         </div>
-        <div id="status">🔒 View-only mode</div>
+        <div class="status-view" id="status">🔒 View-only mode</div>
         <button onclick="sayHello()">Say I'm Here 👋</button>
         <div id="users" style="margin-top:20px; color:#888;">Connecting...</div>
     </div>
@@ -145,9 +155,12 @@
 
     document.getElementById('fileName').textContent = fileName;
 
+    // Generate guest name
+    const guestName = "Guest" + (1000 + Math.floor(Math.random() * 9000));
+    document.getElementById('guestName').textContent = guestName;
+
     // SAY HELLO FUNCTION
     function sayHello() {
-        const guestName = document.getElementById('guestName').textContent;
         alert("Hi! I'm " + guestName + " 👋\n\nWaiting for the host to grant edit permission...");
     }
 
@@ -168,9 +181,6 @@
         });
 
         console.log("✅ Monaco Editor created (read-only)");
-
-        const guestName = "Guest" + Math.floor(Math.random() * 9999);
-        document.getElementById('guestName').textContent = guestName;
         console.log("👤 Guest username:", guestName);
 
         // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -178,6 +188,7 @@
         // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         console.log("════════════════════════════════════════");
         console.log("🔌 Guest connecting to WebSocket...");
+        console.log("   Guest Name:", guestName);
 
         const socket = new SockJS('/ws');
         const client = Stomp.over(socket);
@@ -189,7 +200,12 @@
 
         let isConnected = false;
 
-        client.connect({}, (frame) => {
+        // Send guest name in STOMP headers
+        const stompHeaders = {
+            'username': guestName
+        };
+
+        client.connect(stompHeaders, (frame) => {
             isConnected = true;
 
             console.log("════════════════════════════════════════");
@@ -197,13 +213,14 @@
             console.log("   Session:", frame.headers['session']);
             console.log("   Room:", roomId);
             console.log("   File:", fileId);
+            console.log("   Guest Name:", guestName);
             console.log("════════════════════════════════════════");
 
             document.getElementById('connectionStatus').className = 'status-indicator status-connected';
             document.getElementById('users').innerHTML = '<span style="color:#0f0">✓ ' + guestName + ' connected</span>';
 
             // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            // SUBSCRIBE TO TEXT CHANGES (SAME AS HOST!)
+            // SUBSCRIBE TO TEXT CHANGES
             // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
             const textSubscription = client.subscribe('/topic/room/' + fileId, msg => {
                 console.log("════════════════════════════════════════");
@@ -241,7 +258,7 @@
             // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
             // SUBSCRIBE TO PERMISSION CHANGES
             // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            client.subscribe('/topic/room/' + roomId + '/permissions', msg => {
+            client.subscribe('/topic/room/' + fileId + '/permissions', msg => {
                 console.log("════════════════════════════════════════");
                 console.log("🔓 PERMISSION UPDATE RECEIVED");
 
@@ -249,11 +266,16 @@
                     const perm = JSON.parse(msg.body);
                     console.log("   Permission:", perm);
 
-                    if (perm.username === guestName && perm.canEdit) {
+                    if (perm.guestName === guestName && perm.canEdit) {
                         console.log("✅ EDIT PERMISSION GRANTED!");
 
+                        // Enable editor
                         editor.updateOptions({ readOnly: false });
-                        document.getElementById('status').innerHTML = "<span style='color:#0f0; font-weight:bold;'>✓ You can now EDIT!</span>";
+
+                        // Update status
+                        const statusDiv = document.getElementById('status');
+                        statusDiv.innerHTML = "<span style='font-weight:bold;'>✓ You can now EDIT!</span>";
+                        statusDiv.className = 'status-edit';
 
                         // Enable sending edits
                         let typingTimer;
@@ -271,6 +293,20 @@
                                 }
                             }, 300);
                         });
+
+                        alert("🎉 You can now edit the file!");
+                    } else if (perm.guestName === guestName && !perm.canEdit) {
+                        console.log("🔒 EDIT PERMISSION REVOKED");
+
+                        // Disable editor
+                        editor.updateOptions({ readOnly: true });
+
+                        // Update status
+                        const statusDiv = document.getElementById('status');
+                        statusDiv.innerHTML = "🔒 View-only mode";
+                        statusDiv.className = 'status-view';
+
+                        alert("🔒 Your edit permission was revoked");
                     }
                 } catch (e) {
                     console.error("❌ Failed to parse permission:", e);
@@ -279,7 +315,7 @@
                 console.log("════════════════════════════════════════");
             });
 
-            console.log("📻 Guest subscribed to: /topic/room/" + roomId + "/permissions");
+            console.log("📻 Guest subscribed to: /topic/room/" + fileId + "/permissions");
 
             // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
             // SUBSCRIBE TO CURSORS
@@ -289,40 +325,41 @@
                     const cursor = JSON.parse(msg.body);
                     console.log("👆 Cursor:", cursor.username, "at", cursor.line + ":" + cursor.column);
                 } catch (e) {
-console.error("❌ Failed to parse cursor:", e);
-}
-});
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        // SEND OWN CURSOR
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        editor.onDidChangeCursorPosition(e => {
-            if (isConnected) {
-                try {
-                    client.send('/app/room/' + fileId + '/cursor', {}, JSON.stringify({
-                        username: guestName,
-                        line: e.position.lineNumber,
-                        column: e.position.column
-                    }));
-                } catch (err) {
-                    console.error("❌ Failed to send cursor:", err);
+                    console.error("❌ Failed to parse cursor:", e);
                 }
-            }
+            });
+
+            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            // SEND OWN CURSOR
+            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            editor.onDidChangeCursorPosition(e => {
+                if (isConnected) {
+                    try {
+                        client.send('/app/room/' + fileId + '/cursor', {}, JSON.stringify({
+                            username: guestName,
+                            line: e.position.lineNumber,
+                            column: e.position.column
+                        }));
+                    } catch (err) {
+                        console.error("❌ Failed to send cursor:", err);
+                    }
+                }
+            });
+
+            console.log("✅ Guest event listeners attached");
+
+        }, (error) => {
+            isConnected = false;
+
+            console.error("════════════════════════════════════════");
+            console.error("❌ GUEST WEBSOCKET FAILED");
+            console.error("   Error:", error);
+            console.error("════════════════════════════════════════");
+
+            document.getElementById('connectionStatus').className = 'status-indicator status-disconnected';
+            document.getElementById('users').innerHTML = "<span style='color:red'>❌ Connection failed</span>";
         });
-
-        console.log("✅ Guest event listeners attached");
-
-    }, (error) => {
-        isConnected = false;
-
-        console.error("════════════════════════════════════════");
-        console.error("❌ GUEST WEBSOCKET FAILED");
-        console.error("   Error:", error);
-        console.error("════════════════════════════════════════");
-
-        document.getElementById('connectionStatus').className = 'status-indicator status-disconnected';
-        document.getElementById('users').innerHTML = "<span style='color:red'>❌ Connection failed</span>";
     });
-});
 </script>
 </body>
 </html>
