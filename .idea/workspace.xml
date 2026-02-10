@@ -5,22 +5,16 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="55cddaad-c591-45a7-bea1-5228269cadae" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/controller/PermissionController.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/entity/PermissionEntity.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/entity/PermissionRole.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/repository/PermissionRepository.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/service/ActiveUsersService.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/service/PermissionService.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/service/dto/PermissionDTO.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/controller/CompilerController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/service/CompilationService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/service/ExecutionService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/service/dto/CompilationError.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/service/dto/CompilationResult.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/service/dto/ExecutionResult.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/config/WebSocketConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/config/WebSocketConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/config/WebSocketEventListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/config/WebSocketEventListener.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/controller/CollaborationController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/controller/CollaborationController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/controller/FileController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/controller/FileController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/backend/pom.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/controller/RoomController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/controller/RoomController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/entity/RoomEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/entity/RoomEntity.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/service/FileService.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/service/FileService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/service/dto/FileDTO.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/service/dto/FileDTO.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend/src/main/resources/static/editor.html" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/resources/static/editor.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend/src/main/resources/static/room-guest.html" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/resources/static/room-guest.html" afterDir="false" />
     </list>
@@ -99,7 +93,7 @@
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
     &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
     &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;project.structure.last.edited&quot;: &quot;SDKs&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Project&quot;,
     &quot;project.structure.proportion&quot;: &quot;0.0&quot;,
     &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;,
     &quot;run.code.analysis.last.selected.profile&quot;: &quot;pProject Default&quot;,

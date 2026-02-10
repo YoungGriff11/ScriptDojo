@@ -43,7 +43,7 @@ public class RoomController {
         // Generate unique room ID (11 chars)
         String roomId = generateRoomId();
 
-        // Create room entity (without builder)
+        // Create room entity
         RoomEntity room = new RoomEntity();
         room.setId(roomId);
         room.setFileId(fileId);
@@ -92,16 +92,22 @@ public class RoomController {
         // Encode file content as Base64 for URL
         String encodedContent = Base64.getEncoder().encodeToString(file.getContent().getBytes());
 
-        // Build redirect URL with all data
+        // ✅ GENERATE GUEST NAME
+        String guestName = generateGuestName();
+        log.info("   Guest Name: {}", guestName);
+
+        // Build redirect URL with all data INCLUDING guestName
         String redirectUrl = String.format(
-                "/room-guest.html?roomId=%s&fileId=%d&fileName=%s&content=%s",
+                "/room-guest.html?roomId=%s&fileId=%d&fileName=%s&content=%s&guestName=%s",
                 roomId,
                 file.getId(),
                 file.getName(),
-                encodedContent
+                encodedContent,
+                guestName
         );
 
         log.info("✅ Redirecting guest to room-guest.html");
+        log.info("   Redirect URL: {}", redirectUrl);
         log.info("════════════════════════════════════════════════════");
 
         return new RedirectView(redirectUrl);
@@ -118,5 +124,13 @@ public class RoomController {
             id.append(chars.charAt(random.nextInt(chars.length())));
         }
         return id.toString();
+    }
+
+    /**
+     * Generate a random guest name
+     */
+    private String generateGuestName() {
+        int randomNum = (int) (Math.random() * 10000);
+        return "Guest" + randomNum;
     }
 }
