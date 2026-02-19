@@ -206,6 +206,7 @@
     let client;
     let isRemoteChange = false;
     let hasEditPermission = false;
+    let latestErrors = []; // ✅ FIX: Cache latest errors so they survive setValue()
 
     console.log("════════════════════════════════════════");
     console.log("👤 GUEST JOINED");
@@ -276,7 +277,6 @@
         const sock = new SockJS('/ws');
         client = Stomp.over(sock);
 
-        // Send guest name in STOMP headers (OLD METHOD)
         const stompHeaders = {
             'username': guestName
         };
@@ -288,15 +288,23 @@
 
             // Subscribe to room edits
             client.subscribe('/topic/room/' + fileId, msg => {
-                const data = JSON.parse(msg.body);
-                console.log("📝 Guest received edit from:", data.username);
+    const data = JSON.parse(msg.body);
+    if (data.username !== guestName) {
+        isRemoteChange = true;
+        editor.setValue(data.content);
 
-                if (data.username !== guestName) {
-                    isRemoteChange = true;
-                    editor.setValue(data.content);
-                    console.log("   Updated editor with remote content");
-                }
-            });
+        // ✅ FIX: setTimeout lets Monaco fully settle before re-applying markers
+        setTimeout(() => {
+            if (latestErrors.length > 0) {
+                highlightSyntaxErrors(latestErrors);
+            } else {
+                clearSyntaxErrors();
+            }
+        }, 50);
+    } else {
+        console.log("   ⏭️ Skipping my own edit");
+    }
+});
 
             // Subscribe to permission updates
             client.subscribe('/topic/room/' + fileId + '/permissions', msg => {
@@ -349,6 +357,29 @@
                     handleCompilerEvent(data);
                 } catch (e) {
                     console.error("❌ Failed to parse compiler message:", e);
+                }
+
+                console.log("════════════════════════════════════════");
+            });
+
+            // Subscribe to parser errors
+            client.subscribe('/topic/room/' + fileId + '/errors', function(msg) {
+                const data = JSON.parse(msg.body);
+                console.log("════════════════════════════════════════");
+                console.log("🔴 GUEST RECEIVED PARSER ERRORS");
+                console.log("   From:", data.username);
+                console.log("   Errors:", data.errors ? data.errors.length : 0);
+
+                // ✅ FIX: Store errors in cache so they survive future setValue() calls
+                latestErrors = data.errors || [];
+
+                if (latestErrors.length > 0) {
+                    console.log("🔴 Guest highlighting", latestErrors.length, "syntax errors");
+                    highlightSyntaxErrors(latestErrors);
+                    console.log("✅ Guest error markers set");
+                } else {
+                    console.log("✅ Guest: No errors - clearing markers");
+                    clearSyntaxErrors();
                 }
 
                 console.log("════════════════════════════════════════");
@@ -430,6 +461,53 @@
 
             default:
                 console.warn("Unknown compiler event:", data.event);
+        }
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // HIGHLIGHT SYNTAX ERRORS IN MONACO EDITOR
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    function highlightSyntaxErrors(errors) {
+        console.log("🔴 Guest highlighting", errors.length, "syntax errors");
+
+        if (!editor) {
+            console.error("❌ Editor not initialized");
+            return;
+        }
+
+        const markers = errors.map(err => ({
+            startLineNumber: err.line,
+            startColumn: err.column || 1,
+            endLineNumber: err.line,
+            endColumn: (err.column || 1) + 10,
+            message: err.message || "Syntax error",
+            severity: monaco.MarkerSeverity.Error
+        }));
+
+        const model = editor.getModel();
+        if (model) {
+            monaco.editor.setModelMarkers(model, 'parser', markers);
+            console.log("✅ Guest error markers set");
+        } else {
+            console.error("❌ Editor model not found");
+        }
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // CLEAR SYNTAX ERROR HIGHLIGHTING
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    function clearSyntaxErrors() {
+        console.log("🧹 Guest clearing error markers");
+
+        if (!editor) {
+            return;
+        }
+
+        const model = editor.getModel();
+        if (model) {
+            monaco.editor.setModelMarkers(model, 'parser', []);
         }
     }
 

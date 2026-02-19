@@ -5,16 +5,23 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="55cddaad-c591-45a7-bea1-5228269cadae" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/controller/CompilerController.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/service/CompilationService.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/service/ExecutionService.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/service/dto/CompilationError.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/service/dto/CompilationResult.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/service/dto/ExecutionResult.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backend/src/main/antlr4/org/scriptdojo/backend/parser/Java9.g4" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/controller/ParserController.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/parser/ASTVisitor.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/parser/ErrorListener.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/parser/ParserService.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/service/dto/ASTNode.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/service/dto/CodeMetrics.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/service/dto/ParseResult.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/service/dto/ParserErrorBroadcast.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/service/dto/SyntaxError.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/backend/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/controller/RoomController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/controller/RoomController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/controller/CollaborationController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/controller/CollaborationController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/service/dto/TextChange.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/service/dto/TextChange.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend/src/main/resources/static/editor.html" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/resources/static/editor.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend/src/main/resources/static/room-guest.html" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/resources/static/room-guest.html" afterDir="false" />
     </list>
@@ -93,11 +100,11 @@
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
     &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
     &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;project.structure.last.edited&quot;: &quot;Project&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Modules&quot;,
     &quot;project.structure.proportion&quot;: &quot;0.0&quot;,
     &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;,
     &quot;run.code.analysis.last.selected.profile&quot;: &quot;pProject Default&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;coverage&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;org.antlr.intellij.plugin.configdialogs.ANTLRv4ProjectSettings&quot;,
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
 }</component>

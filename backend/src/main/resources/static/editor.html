@@ -308,6 +308,7 @@
     let isRemoteChange = false;
     let currentUsername = 'Unknown';
     let activeUsers = new Map();
+    let latestErrors = []; // ✅ FIX: Cache latest errors so they survive setValue()
 
     console.log("════════════════════════════════════════");
     console.log("🚀 ScriptDojo Editor Initializing");
@@ -397,66 +398,100 @@
     }
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// WEBSOCKET CONNECTION
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // WEBSOCKET CONNECTION
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-function connectWebSocket() {
-    const socket = new SockJS('/ws');
-    stompClient = Stomp.over(socket);
+    function connectWebSocket() {
+        const socket = new SockJS('/ws');
+        stompClient = Stomp.over(socket);
 
-    stompClient.connect({}, function (frame) {
-        console.log("✅ WebSocket connected");
-        document.getElementById('connectionStatus').className = 'status-indicator status-connected';
+        stompClient.connect({}, function (frame) {
+            console.log("✅ WebSocket connected");
+            document.getElementById('connectionStatus').className = 'status-indicator status-connected';
 
-        // Get current username
-        currentUsername = frame.headers['user-name'] || 'Unknown';
-        console.log("👤 Username:", currentUsername);
+            // Get current username
+            currentUsername = frame.headers['user-name'] || 'Unknown';
+            console.log("👤 Username:", currentUsername);
 
-        // Subscribe to room edits
-        stompClient.subscribe('/topic/room/' + fileId, function (message) {
-            const data = JSON.parse(message.body);
-            if (data.username !== currentUsername) {
-                isRemoteChange = true;
-                editor.setValue(data.content);
+            // Subscribe to room edits
+            stompClient.subscribe('/topic/room/' + fileId, function (message) {
+    const data = JSON.parse(message.body);
+    if (data.username !== currentUsername) {
+        isRemoteChange = true;
+        editor.setValue(data.content);
+
+        // ✅ FIX: setTimeout lets Monaco fully settle before re-applying markers
+        setTimeout(() => {
+            if (latestErrors.length > 0) {
+                highlightSyntaxErrors(latestErrors);
+            } else {
+                clearSyntaxErrors();
             }
-        });
+        }, 50);
+    } else {
+        console.log("   ⏭️ Skipping my own edit");
+    }
+});
 
-        // Subscribe to cursor updates
-        stompClient.subscribe('/topic/room/' + fileId + '/cursors', function (message) {
-            // Handle cursor updates (placeholder for future implementation)
-        });
+            // Subscribe to cursor updates
+            stompClient.subscribe('/topic/room/' + fileId + '/cursors', function (message) {
+                // Handle cursor updates (placeholder for future implementation)
+            });
 
-        // Subscribe to active users
-        stompClient.subscribe('/topic/room/' + fileId + '/users', function (message) {
-            const data = JSON.parse(message.body);
-            console.log("👥 Active users update:", data.users);
-            updateUsersList(data.users);
-        });
-
-        // ✅ COMPILER OUTPUT SUBSCRIPTION - CRITICAL!
-        stompClient.subscribe('/topic/room/' + fileId + '/compiler', function (message) {
-            console.log("════════════════════════════════════════");
-            console.log("🔨 COMPILER EVENT RECEIVED");
-
-            try {
+            // Subscribe to active users
+            stompClient.subscribe('/topic/room/' + fileId + '/users', function (message) {
                 const data = JSON.parse(message.body);
-                console.log("   Event type:", data.event);
-                console.log("   Full data:", data);
-                handleCompilerEvent(data);
-            } catch (e) {
-                console.error("❌ Failed to parse compiler message:", e);
-                console.error("   Raw message:", message.body);
-            }
+                console.log("👥 Active users update:", data.users);
+                updateUsersList(data.users);
+            });
 
-            console.log("════════════════════════════════════════");
+            // Subscribe to compiler output
+            stompClient.subscribe('/topic/room/' + fileId + '/compiler', function (message) {
+                console.log("════════════════════════════════════════");
+                console.log("🔨 COMPILER EVENT RECEIVED");
+
+                try {
+                    const data = JSON.parse(message.body);
+                    console.log("   Event type:", data.event);
+                    console.log("   Full data:", data);
+                    handleCompilerEvent(data);
+                } catch (e) {
+                    console.error("❌ Failed to parse compiler message:", e);
+                    console.error("   Raw message:", message.body);
+                }
+
+                console.log("════════════════════════════════════════");
+            });
+
+            // Subscribe to parser errors
+            stompClient.subscribe('/topic/room/' + fileId + '/errors', function(message) {
+                const data = JSON.parse(message.body);
+                console.log("════════════════════════════════════════");
+                console.log("🔴 PARSER ERRORS RECEIVED");
+                console.log("   From:", data.username);
+                console.log("   Errors:", data.errors ? data.errors.length : 0);
+
+                // ✅ FIX: Store errors in cache so they survive future setValue() calls
+                latestErrors = data.errors || [];
+
+                if (latestErrors.length > 0) {
+                    console.log("🔴 Highlighting", latestErrors.length, "syntax errors");
+                    highlightSyntaxErrors(latestErrors);
+                    console.log("✅ Error markers set");
+                } else {
+                    console.log("✅ No errors - clearing markers");
+                    clearSyntaxErrors();
+                }
+
+                console.log("════════════════════════════════════════");
+            });
+
+            console.log("📻 Subscribed to all topics for file:", fileId);
+        }, function (error) {
+            console.error("❌ WebSocket error:", error);
+            document.getElementById('connectionStatus').className = 'status-indicator status-disconnected';
         });
-
-        console.log("📻 Subscribed to all topics for file:", fileId);
-    }, function (error) {
-        console.error("❌ WebSocket error:", error);
-        document.getElementById('connectionStatus').className = 'status-indicator status-disconnected';
-    });
-}
+    }
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // UPDATE USERS LIST
@@ -491,68 +526,61 @@ function connectWebSocket() {
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
     function grantEditPermission(guestName) {
-    console.log("🔓 Granting edit permission to:", guestName);
+        console.log("🔓 Granting edit permission to:", guestName);
 
-    // ✅ FIX: Send as query parameters instead of JSON body
-    fetch('/api/permissions/grant-edit?fileId=' + fileId + '&guestName=' + encodeURIComponent(guestName), {
-        method: 'POST',
-        credentials: 'include'
-    })
-    .then(response => {
-        if (response.ok) {
-            console.log("✅ Permission granted");
-            alert(`✅ Edit permission granted to ${guestName}`);
-        } else {
-            console.error("❌ Failed to grant permission");
-            alert('❌ Failed to grant permission');
-        }
-    })
-    .catch(error => {
-        console.error("❌ Grant permission error:", error);
-        alert('❌ Error granting permission');
-    });
-}
+        fetch('/api/permissions/grant-edit?fileId=' + fileId + '&guestName=' + encodeURIComponent(guestName), {
+            method: 'POST',
+            credentials: 'include'
+        })
+        .then(response => {
+            if (response.ok) {
+                console.log("✅ Permission granted");
+                alert(`✅ Edit permission granted to ${guestName}`);
+            } else {
+                console.error("❌ Failed to grant permission");
+                alert('❌ Failed to grant permission');
+            }
+        })
+        .catch(error => {
+            console.error("❌ Grant permission error:", error);
+            alert('❌ Error granting permission');
+        });
+    }
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // GENERATE SHARE LINK
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-   // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// GENERATE SHARE LINK
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    function generateShareLink() {
+        console.log("🔗 Generating share link for file:", fileId);
 
-function generateShareLink() {
-    console.log("🔗 Generating share link for file:", fileId);
+        fetch('/api/room/create?fileId=' + fileId, {
+            method: 'POST',
+            credentials: 'include'
+        })
+        .then(response => {
+            console.log("Response status:", response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log("✅ Full response data:", data);
+            console.log("   Room ID:", data.roomId);
+            console.log("   Share URL:", data.url);
 
-    // Send as query parameter, not JSON body
-    fetch('/api/room/create?fileId=' + fileId, {
-        method: 'POST',
-        credentials: 'include'
-    })
-    .then(response => {
-        console.log("Response status:", response.status);
-        return response.json();
-    })
-    .then(data => {
-        console.log("✅ Full response data:", data);
-        console.log("   Room ID:", data.roomId);
-        console.log("   Share URL:", data.url);  // ← Note: it's "url" not "shareUrl"
-
-        // Check if url exists (backend returns "url" not "shareUrl")
-        if (data.url) {
-            document.getElementById('shareLinkInput').value = data.url;
-            document.getElementById('shareLink').style.display = 'block';
-        } else {
-            console.error("❌ url not in response!");
-            console.log("Response keys:", Object.keys(data));
-            alert('❌ Error: Share URL not generated. Check console.');
-        }
-    })
-    .catch(error => {
-        console.error("❌ Error generating share link:", error);
-        alert('❌ Failed to generate share link: ' + error.message);
-    });
-}
+            if (data.url) {
+                document.getElementById('shareLinkInput').value = data.url;
+                document.getElementById('shareLink').style.display = 'block';
+            } else {
+                console.error("❌ url not in response!");
+                console.log("Response keys:", Object.keys(data));
+                alert('❌ Error: Share URL not generated. Check console.');
+            }
+        })
+        .catch(error => {
+            console.error("❌ Error generating share link:", error);
+            alert('❌ Failed to generate share link: ' + error.message);
+        });
+    }
 
     function copyShareLink() {
         const input = document.getElementById('shareLinkInput');
@@ -596,15 +624,12 @@ function generateShareLink() {
 
             if (!data.success) {
                 if (data.stage === 'compilation') {
-                    // Compilation failed
                     displayCompilationErrors(data.compilationResult);
                 } else {
-                    // Execution failed
                     displayExecutionError(data.executionResult);
                 }
             } else {
                 console.log("✅ Code executed successfully");
-                // Output will be displayed via WebSocket broadcast
             }
         })
         .catch(error => {
@@ -703,6 +728,55 @@ function generateShareLink() {
         output.textContent += "Error:\n";
         output.textContent += result.error || result.exceptionMessage || "Unknown error";
         output.textContent += "\n\nExit code: " + result.exitCode;
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // HIGHLIGHT SYNTAX ERRORS IN MONACO EDITOR
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    function highlightSyntaxErrors(errors) {
+        console.log("🔴 Highlighting", errors.length, "syntax errors");
+
+        if (!editor) {
+            console.error("❌ Editor not initialized");
+            return;
+        }
+
+        // Convert parser errors to Monaco markers
+        const markers = errors.map(err => ({
+            startLineNumber: err.line,
+            startColumn: err.column || 1,
+            endLineNumber: err.line,
+            endColumn: (err.column || 1) + 10,
+            message: err.message || "Syntax error",
+            severity: monaco.MarkerSeverity.Error
+        }));
+
+        // Set markers in Monaco editor
+        const model = editor.getModel();
+        if (model) {
+            monaco.editor.setModelMarkers(model, 'parser', markers);
+            console.log("✅ Error markers set");
+        } else {
+            console.error("❌ Editor model not found");
+        }
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // CLEAR SYNTAX ERROR HIGHLIGHTING
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    function clearSyntaxErrors() {
+        console.log("🧹 Clearing error markers");
+
+        if (!editor) {
+            return;
+        }
+
+        const model = editor.getModel();
+        if (model) {
+            monaco.editor.setModelMarkers(model, 'parser', []);
+        }
     }
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
