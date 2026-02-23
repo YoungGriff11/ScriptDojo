@@ -122,7 +122,16 @@
 
         #users {
             margin-top: 20px;
-            color: #888;
+        }
+
+        /* Coloured dot next to username in sidebar */
+        .user-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            flex-shrink: 0;
+            margin-right: 6px;
         }
 
         h3 {
@@ -160,6 +169,25 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #4c4c4c;
         }
+
+        /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+           CURSOR PRESENCE BASE STYLES
+           Dynamic per-user rules are injected via JS
+        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+        .cursor-label-base::after {
+            font-size: 11px;
+            font-family: 'Segoe UI', sans-serif;
+            font-weight: 600;
+            padding: 1px 5px;
+            border-radius: 3px;
+            position: absolute;
+            margin-left: 2px;
+            pointer-events: none;
+            white-space: nowrap;
+            z-index: 100;
+            top: -1px;
+            line-height: 1.4;
+        }
     </style>
 </head>
 <body>
@@ -174,11 +202,15 @@
             <strong>File:</strong> <span id="fileName">Loading...</span>
         </div>
         <div class="info">
-            <strong>Guest:</strong> <span id="guestName">...</span>
+            <strong>Guest:</strong> <span id="guestNameDisplay">...</span>
         </div>
         <div id="status" class="status-view">🔒 View-only mode</div>
         <button onclick="sayHello()">Say I'm Here 👋</button>
-        <div id="users" style="margin-top:20px; color:#888;">Connecting...</div>
+
+        <div id="users" style="margin-top:20px;">
+            <h3>👥 Active Users</h3>
+            <div id="usersList" style="color:#888;">Connecting...</div>
+        </div>
 
         <hr style="border: 1px solid #444; margin: 15px 0;">
 
@@ -197,16 +229,45 @@
 
 <script>
     const params = new URLSearchParams(window.location.search);
-    const fileId = params.get('fileId');
-    const fileName = params.get('fileName');
+    const fileId      = params.get('fileId');
+    const fileName    = params.get('fileName');
     const fileContent = params.get('content');
-    const guestName = params.get('guestName');
+    const guestName   = params.get('guestName');
 
     let editor;
     let client;
     let isRemoteChange = false;
     let hasEditPermission = false;
-    let latestErrors = []; // ✅ FIX: Cache latest errors so they survive setValue()
+    let latestErrors = [];
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // CURSOR PRESENCE STATE
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    // Map of username -> array of Monaco decoration IDs
+    const cursorDecorations = new Map();
+
+    // Map of username -> hex color string
+    const userColors = new Map();
+
+    // Colour palette
+    const CURSOR_COLORS = [
+        '#FF6B6B',
+        '#4ECDC4',
+        '#45B7D1',
+        '#96CEB4',
+        '#FFEAA7',
+        '#DDA0DD',
+        '#98D8C8',
+        '#F39C12',
+        '#A29BFE',
+        '#FD79A8',
+    ];
+
+    let colorIndex = 0;
+
+    // Debounce timer for cursor sends
+    let cursorSendTimer = null;
 
     console.log("════════════════════════════════════════");
     console.log("👤 GUEST JOINED");
@@ -216,7 +277,140 @@
     console.log("════════════════════════════════════════");
 
     document.getElementById('fileName').textContent = fileName || 'Unknown';
-    document.getElementById('guestName').textContent = guestName || 'Guest';
+    document.getElementById('guestNameDisplay').textContent = guestName || 'Guest';
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // CURSOR COLOUR HELPERS  (identical to editor.html)
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    function getColorForUser(username) {
+        if (!userColors.has(username)) {
+            userColors.set(username, CURSOR_COLORS[colorIndex % CURSOR_COLORS.length]);
+            colorIndex++;
+        }
+        return userColors.get(username);
+    }
+
+    function hexToRgba(hex, alpha) {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return `rgba(${r},${g},${b},${alpha})`;
+    }
+
+    function safeCssClass(username) {
+        return username.replace(/[^a-zA-Z0-9]/g, '_');
+    }
+
+    function injectCursorStyle(username, color) {
+        const safe = safeCssClass(username);
+        const styleId = `cursor-style-${safe}`;
+        if (document.getElementById(styleId)) return;
+
+        const style = document.createElement('style');
+        style.id = styleId;
+        style.textContent = `
+            .cursor-bg-${safe} {
+                background: ${hexToRgba(color, 0.12)} !important;
+            }
+            .cursor-label-${safe}::after {
+                content: "${username}";
+                background: ${color};
+                color: #1e1e1e;
+                font-size: 11px;
+                font-family: 'Segoe UI', sans-serif;
+                font-weight: 700;
+                padding: 1px 5px;
+                border-radius: 3px;
+                position: absolute;
+                margin-left: 2px;
+                pointer-events: none;
+                white-space: nowrap;
+                z-index: 100;
+                top: -1px;
+                line-height: 1.4;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // CURSOR RENDERING
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    function renderRemoteCursor(username, line, column) {
+        if (!editor) return;
+
+        const color = getColorForUser(username);
+        injectCursorStyle(username, color);
+
+        const safe = safeCssClass(username);
+        const model = editor.getModel();
+        if (!model) return;
+
+        const safeColumn = Math.max(1, column);
+        const safeLine   = Math.max(1, line);
+
+        const oldDecorations = cursorDecorations.get(username) || [];
+
+        const newDecorations = editor.deltaDecorations(oldDecorations, [
+            {
+                range: new monaco.Range(safeLine, 1, safeLine, 1),
+                options: {
+                    isWholeLine: true,
+                    className: `cursor-bg-${safe}`,
+                    zIndex: 1,
+                }
+            },
+            {
+                range: new monaco.Range(safeLine, safeColumn, safeLine, safeColumn),
+                options: {
+                    afterContentClassName: `cursor-label-${safe}`,
+                    hoverMessage: { value: `**${username}** is here` },
+                    zIndex: 2,
+                }
+            }
+        ]);
+
+        cursorDecorations.set(username, newDecorations);
+    }
+
+    function removeUserCursor(username) {
+        if (!editor) return;
+        const old = cursorDecorations.get(username);
+        if (old && old.length > 0) editor.deltaDecorations(old, []);
+        cursorDecorations.delete(username);
+        userColors.delete(username);
+
+        const safe = safeCssClass(username);
+        const styleEl = document.getElementById(`cursor-style-${safe}`);
+        if (styleEl) styleEl.remove();
+
+        console.log(`🧹 Removed cursor for: ${username}`);
+    }
+
+    /**
+     * Sends cursor position to server — only when the guest has edit permission,
+     * but we still send in view mode so the host can see where the guest is looking.
+     */
+    function sendCursorPosition() {
+        clearTimeout(cursorSendTimer);
+        cursorSendTimer = setTimeout(() => {
+            if (!client || !client.connected) return;
+            const position = editor.getPosition();
+            if (!position) return;
+
+            client.send(
+                "/app/room/" + fileId + "/cursor",
+                {},
+                JSON.stringify({
+                    username: guestName,
+                    line: position.lineNumber,
+                    column: position.column
+                })
+            );
+        }, 50);
+    }
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // INITIALIZE MONACO EDITOR
@@ -225,14 +419,11 @@
     require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.34.1/min/vs' } });
 
     require(['vs/editor/editor.main'], () => {
-        // Load initial content from URL
         let initialContent = '// Loading...';
         if (fileContent) {
             try {
                 initialContent = atob(fileContent);
-                console.log("✅ Content decoded from URL");
-            } catch (error) {
-                console.error("❌ Failed to decode content:", error);
+            } catch (e) {
                 initialContent = '// Error loading content';
             }
         }
@@ -249,6 +440,7 @@
 
         console.log("✅ Monaco Editor initialized (read-only)");
 
+        // Send edits when the guest has edit permission
         editor.onDidChangeModelContent(e => {
             if (!isRemoteChange && hasEditPermission) {
                 const content = editor.getValue();
@@ -261,6 +453,11 @@
             isRemoteChange = false;
         });
 
+        // ✅ NEW: Always broadcast cursor position (host can see where guest is)
+        editor.onDidChangeCursorPosition(e => {
+            sendCursorPosition();
+        });
+
         connectWebSocket();
     });
 
@@ -269,123 +466,89 @@
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
     function connectWebSocket() {
-        console.log("════════════════════════════════════════");
-        console.log("🔌 GUEST CONNECTING TO WEBSOCKET");
-        console.log("   Guest Name:", guestName);
-        console.log("════════════════════════════════════════");
-
         const sock = new SockJS('/ws');
         client = Stomp.over(sock);
 
-        const stompHeaders = {
-            'username': guestName
-        };
-
-        client.connect(stompHeaders, frame => {
-            console.log("✅ GUEST WebSocket connected");
-            console.log("   Connected as:", guestName);
+        client.connect({ 'username': guestName }, frame => {
+            console.log("✅ GUEST WebSocket connected as:", guestName);
             document.getElementById('connectionStatus').className = 'status-indicator status-connected';
 
-            // Subscribe to room edits
+            // ── Room edits ───────────────────────────────────
             client.subscribe('/topic/room/' + fileId, msg => {
-    const data = JSON.parse(msg.body);
-    if (data.username !== guestName) {
-        isRemoteChange = true;
-        editor.setValue(data.content);
-
-        // ✅ FIX: setTimeout lets Monaco fully settle before re-applying markers
-        setTimeout(() => {
-            if (latestErrors.length > 0) {
-                highlightSyntaxErrors(latestErrors);
-            } else {
-                clearSyntaxErrors();
-            }
-        }, 50);
-    } else {
-        console.log("   ⏭️ Skipping my own edit");
-    }
-});
-
-            // Subscribe to permission updates
-            client.subscribe('/topic/room/' + fileId + '/permissions', msg => {
-                console.log("════════════════════════════════════════");
-                console.log("🔓 GUEST RECEIVED PERMISSION UPDATE");
-
                 const data = JSON.parse(msg.body);
-                console.log("   Guest Name:", data.guestName);
-                console.log("   Can Edit:", data.canEdit);
+                if (data.username !== guestName) {
+                    isRemoteChange = true;
+                    editor.setValue(data.content);
+                    setTimeout(() => {
+                        if (latestErrors.length > 0) highlightSyntaxErrors(latestErrors);
+                        else clearSyntaxErrors();
+                    }, 50);
+                }
+            });
 
+            // ── Cursor positions ─────────────────────────────
+            client.subscribe('/topic/room/' + fileId + '/cursors', msg => {
+                const data = JSON.parse(msg.body);
+
+                // Ignore our own cursor
+                if (data.username === guestName) return;
+
+                console.log(`👆 Cursor update — ${data.username} at ${data.line}:${data.column}`);
+                renderRemoteCursor(data.username, data.line, data.column);
+            });
+
+            // ── Permission updates ───────────────────────────
+            client.subscribe('/topic/room/' + fileId + '/permissions', msg => {
+                const data = JSON.parse(msg.body);
                 if (data.guestName === guestName && data.canEdit) {
                     hasEditPermission = true;
                     editor.updateOptions({ readOnly: false });
                     document.getElementById('status').className = 'status-edit';
                     document.getElementById('status').textContent = '✏️ Edit mode enabled!';
-                    console.log("✅ Guest can now edit");
                     alert('🎉 You can now edit the file!');
                 } else if (data.guestName === guestName && !data.canEdit) {
                     hasEditPermission = false;
                     editor.updateOptions({ readOnly: true });
                     document.getElementById('status').className = 'status-view';
                     document.getElementById('status').textContent = '🔒 View-only mode';
-                    console.log("🔒 Edit permission revoked");
                     alert('🔒 Edit permission revoked');
                 }
-
-                console.log("════════════════════════════════════════");
             });
 
-            // Subscribe to cursor updates
-            client.subscribe('/topic/room/' + fileId + '/cursors', msg => {
-                // Placeholder for cursor tracking
-            });
-
-            // Subscribe to active users
+            // ── Active users ─────────────────────────────────
             client.subscribe('/topic/room/' + fileId + '/users', msg => {
                 const data = JSON.parse(msg.body);
-                console.log("👥 Guest received active users:", data.users);
+                console.log("👥 Active users:", data.users);
+
+                // Remove cursors for anyone who has left
+                cursorDecorations.forEach((_, username) => {
+                    if (!data.users.includes(username)) {
+                        removeUserCursor(username);
+                    }
+                });
+
                 updateUsersList(data.users);
             });
 
-            // Subscribe to compiler output
+            // ── Compiler events ──────────────────────────────
             client.subscribe('/topic/room/' + fileId + '/compiler', msg => {
-                console.log("════════════════════════════════════════");
-                console.log("🔨 GUEST RECEIVED COMPILER EVENT");
-
                 try {
-                    const data = JSON.parse(msg.body);
-                    console.log("   Event:", data.event);
-                    handleCompilerEvent(data);
+                    handleCompilerEvent(JSON.parse(msg.body));
                 } catch (e) {
                     console.error("❌ Failed to parse compiler message:", e);
                 }
-
-                console.log("════════════════════════════════════════");
             });
 
-            // Subscribe to parser errors
-            client.subscribe('/topic/room/' + fileId + '/errors', function(msg) {
+            // ── Parser / syntax errors ───────────────────────
+            client.subscribe('/topic/room/' + fileId + '/errors', msg => {
                 const data = JSON.parse(msg.body);
-                console.log("════════════════════════════════════════");
-                console.log("🔴 GUEST RECEIVED PARSER ERRORS");
-                console.log("   From:", data.username);
-                console.log("   Errors:", data.errors ? data.errors.length : 0);
-
-                // ✅ FIX: Store errors in cache so they survive future setValue() calls
                 latestErrors = data.errors || [];
-
-                if (latestErrors.length > 0) {
-                    console.log("🔴 Guest highlighting", latestErrors.length, "syntax errors");
-                    highlightSyntaxErrors(latestErrors);
-                    console.log("✅ Guest error markers set");
-                } else {
-                    console.log("✅ Guest: No errors - clearing markers");
-                    clearSyntaxErrors();
-                }
-
-                console.log("════════════════════════════════════════");
+                if (latestErrors.length > 0) highlightSyntaxErrors(latestErrors);
+                else clearSyntaxErrors();
             });
 
             console.log("📻 Guest subscribed to all topics for file:", fileId);
+
         }, error => {
             console.error("❌ WebSocket error:", error);
             document.getElementById('connectionStatus').className = 'status-indicator status-disconnected';
@@ -397,85 +560,71 @@
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
     function updateUsersList(users) {
-        const usersDiv = document.getElementById('users');
+        const usersDiv = document.getElementById('usersList');
         if (!users || users.length === 0) {
             usersDiv.textContent = 'No other users online';
             return;
         }
 
-        usersDiv.innerHTML = '<strong style="color:#0ff;">👥 Active Users:</strong><br>';
+        usersDiv.innerHTML = '';
         users.forEach(user => {
-            usersDiv.innerHTML += `<div style="margin:5px 0; color:#d4d4d4;">• ${user}</div>`;
+            const isMe = user === guestName;
+            const dotColor = isMe ? '#888' : (userColors.get(user) || '#888');
+
+            const div = document.createElement('div');
+            div.style.cssText = 'margin:5px 0; color:#d4d4d4; display:flex; align-items:center;';
+            div.innerHTML = `
+                <span class="user-dot" style="background:${dotColor};"></span>
+                ${user}${isMe ? ' (you)' : ''}
+            `;
+            usersDiv.appendChild(div);
         });
     }
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // HANDLE COMPILER EVENTS (GUEST SIDE - READ ONLY)
+    // COMPILER EVENTS (READ-ONLY, JUST DISPLAY)
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
     function handleCompilerEvent(data) {
         const output = document.getElementById('output');
-
-        switch(data.event) {
+        switch (data.event) {
             case 'compilation_started':
                 output.style.color = "#0ff";
                 output.textContent = "🔨 Host is compiling " + data.className + "...\n";
                 break;
-
             case 'compilation_success':
                 output.style.color = "#0f0";
-                output.textContent += "✅ Compilation successful (" + data.compilationTimeMs + "ms)\n";
-                output.textContent += "🚀 Executing...\n";
+                output.textContent += "✅ Compilation successful (" + data.compilationTimeMs + "ms)\n🚀 Executing...\n";
                 break;
-
             case 'compilation_failed':
                 output.style.color = "#f44";
                 output.textContent = "❌ COMPILATION FAILED\n\n";
-
-                if (data.errorMessage) {
-                    output.textContent += data.errorMessage + "\n\n";
-                }
-
+                if (data.errorMessage) output.textContent += data.errorMessage + "\n\n";
                 if (data.errors && data.errors.length > 0) {
                     output.textContent += "Errors:\n";
-                    data.errors.forEach(error => {
-                        output.textContent += `  Line ${error.lineNumber}: ${error.message}\n`;
-                    });
+                    data.errors.forEach(e => { output.textContent += `  Line ${e.lineNumber}: ${e.message}\n`; });
                 }
                 break;
-
             case 'execution_success':
                 output.style.color = "#0f0";
-                output.textContent = "✅ CODE EXECUTED (" + data.executionTimeMs + "ms)\n\n";
-                output.textContent += "Output:\n";
+                output.textContent = "✅ CODE EXECUTED (" + data.executionTimeMs + "ms)\n\nOutput:\n";
                 output.textContent += data.output || "(no output)";
                 break;
-
             case 'execution_failed':
                 output.style.color = "#f44";
-                output.textContent = "❌ EXECUTION FAILED\n\n";
-                output.textContent += "Error:\n";
+                output.textContent = "❌ EXECUTION FAILED\n\nError:\n";
                 output.textContent += data.error || data.exceptionMessage || "Unknown error";
                 output.textContent += "\n\nExit code: " + data.exitCode;
                 break;
-
-            default:
-                console.warn("Unknown compiler event:", data.event);
         }
     }
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // HIGHLIGHT SYNTAX ERRORS IN MONACO EDITOR
+    // ERROR HIGHLIGHTING
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
     function highlightSyntaxErrors(errors) {
-        console.log("🔴 Guest highlighting", errors.length, "syntax errors");
-
-        if (!editor) {
-            console.error("❌ Editor not initialized");
-            return;
-        }
-
+        if (!editor) return;
         const markers = errors.map(err => ({
             startLineNumber: err.line,
             startColumn: err.column || 1,
@@ -484,31 +633,14 @@
             message: err.message || "Syntax error",
             severity: monaco.MarkerSeverity.Error
         }));
-
         const model = editor.getModel();
-        if (model) {
-            monaco.editor.setModelMarkers(model, 'parser', markers);
-            console.log("✅ Guest error markers set");
-        } else {
-            console.error("❌ Editor model not found");
-        }
+        if (model) monaco.editor.setModelMarkers(model, 'parser', markers);
     }
 
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // CLEAR SYNTAX ERROR HIGHLIGHTING
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
     function clearSyntaxErrors() {
-        console.log("🧹 Guest clearing error markers");
-
-        if (!editor) {
-            return;
-        }
-
+        if (!editor) return;
         const model = editor.getModel();
-        if (model) {
-            monaco.editor.setModelMarkers(model, 'parser', []);
-        }
+        if (model) monaco.editor.setModelMarkers(model, 'parser', []);
     }
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -517,7 +649,6 @@
 
     function sayHello() {
         alert('👋 Hello from ' + guestName + '!');
-        console.log(guestName + " said hello!");
     }
 </script>
 

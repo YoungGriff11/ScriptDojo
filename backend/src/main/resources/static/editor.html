@@ -175,6 +175,18 @@
 
         .user-name {
             color: #d4d4d4;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Coloured dot next to username in sidebar */
+        .user-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            flex-shrink: 0;
         }
 
         .permission-badge {
@@ -252,6 +264,25 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #4c4c4c;
         }
+
+        /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+           CURSOR PRESENCE BASE STYLES
+           Dynamic per-user rules are injected via JS
+        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+        .cursor-label-base::after {
+            font-size: 11px;
+            font-family: 'Segoe UI', sans-serif;
+            font-weight: 600;
+            padding: 1px 5px;
+            border-radius: 3px;
+            position: absolute;
+            margin-left: 2px;
+            pointer-events: none;
+            white-space: nowrap;
+            z-index: 100;
+            top: -1px;
+            line-height: 1.4;
+        }
     </style>
 </head>
 <body>
@@ -300,7 +331,6 @@
 <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.34.1/min/vs/loader.min.js"></script>
 
-
 <script>
     const fileId = new URLSearchParams(window.location.search).get('fileId');
     let editor;
@@ -308,12 +338,207 @@
     let isRemoteChange = false;
     let currentUsername = 'Unknown';
     let activeUsers = new Map();
-    let latestErrors = []; // ✅ FIX: Cache latest errors so they survive setValue()
+    let latestErrors = [];
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // CURSOR PRESENCE STATE
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    // Map of username -> array of Monaco decoration IDs
+    const cursorDecorations = new Map();
+
+    // Map of username -> hex color string (assigned once, stable per session)
+    const userColors = new Map();
+
+    // Colour palette — distinct enough to tell users apart
+    const CURSOR_COLORS = [
+        '#FF6B6B', // coral red
+        '#4ECDC4', // teal
+        '#45B7D1', // sky blue
+        '#96CEB4', // sage green
+        '#FFEAA7', // soft yellow
+        '#DDA0DD', // plum
+        '#98D8C8', // mint
+        '#F39C12', // orange
+        '#A29BFE', // lavender
+        '#FD79A8', // pink
+    ];
+
+    let colorIndex = 0;
+
+    // Debounce timer for cursor sends
+    let cursorSendTimer = null;
 
     console.log("════════════════════════════════════════");
     console.log("🚀 ScriptDojo Editor Initializing");
     console.log("   File ID:", fileId);
     console.log("════════════════════════════════════════");
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // CURSOR COLOUR HELPERS
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    /**
+     * Returns a stable colour for a given username.
+     * Assigns one on first call and caches it.
+     */
+    function getColorForUser(username) {
+        if (!userColors.has(username)) {
+            userColors.set(username, CURSOR_COLORS[colorIndex % CURSOR_COLORS.length]);
+            colorIndex++;
+        }
+        return userColors.get(username);
+    }
+
+    /**
+     * Converts a hex colour (#RRGGBB) to rgba(r,g,b,alpha)
+     */
+    function hexToRgba(hex, alpha) {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return `rgba(${r},${g},${b},${alpha})`;
+    }
+
+    /**
+     * Sanitises a username so it is safe to use in a CSS class name.
+     */
+    function safeCssClass(username) {
+        return username.replace(/[^a-zA-Z0-9]/g, '_');
+    }
+
+    /**
+     * Injects (or updates) the CSS rules for a user's cursor decorations.
+     * Called once per new user.
+     */
+    function injectCursorStyle(username, color) {
+        const safe = safeCssClass(username);
+        const styleId = `cursor-style-${safe}`;
+
+        // Don't inject twice
+        if (document.getElementById(styleId)) return;
+
+        const style = document.createElement('style');
+        style.id = styleId;
+        style.textContent = `
+            /* Line background highlight for ${username} */
+            .cursor-bg-${safe} {
+                background: ${hexToRgba(color, 0.12)} !important;
+            }
+
+            /* Username label that appears inline at cursor position */
+            .cursor-label-${safe}::after {
+                content: "${username}";
+                background: ${color};
+                color: #1e1e1e;
+                font-size: 11px;
+                font-family: 'Segoe UI', sans-serif;
+                font-weight: 700;
+                padding: 1px 5px;
+                border-radius: 3px;
+                position: absolute;
+                margin-left: 2px;
+                pointer-events: none;
+                white-space: nowrap;
+                z-index: 100;
+                top: -1px;
+                line-height: 1.4;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // CURSOR RENDERING
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    /**
+     * Renders (or updates) a remote user's cursor in the editor.
+     * Uses two decorations:
+     *   1. A full-line background tint so you can see which line they're on
+     *   2. An inline label at the exact column showing their name
+     */
+    function renderRemoteCursor(username, line, column) {
+        if (!editor) return;
+
+        const color = getColorForUser(username);
+        injectCursorStyle(username, color);
+
+        const safe = safeCssClass(username);
+        const model = editor.getModel();
+        if (!model) return;
+
+        // Monaco lines and columns are 1-based — guard against bad values
+        const safeColumn = Math.max(1, column);
+        const safeLine   = Math.max(1, line);
+
+        const oldDecorations = cursorDecorations.get(username) || [];
+
+        const newDecorations = editor.deltaDecorations(oldDecorations, [
+            // Decoration 1: subtle background on the whole line
+            {
+                range: new monaco.Range(safeLine, 1, safeLine, 1),
+                options: {
+                    isWholeLine: true,
+                    className: `cursor-bg-${safe}`,
+                    zIndex: 1,
+                }
+            },
+            // Decoration 2: username label sitting at the cursor column
+            {
+                range: new monaco.Range(safeLine, safeColumn, safeLine, safeColumn),
+                options: {
+                    afterContentClassName: `cursor-label-${safe}`,
+                    hoverMessage: { value: `**${username}** is here` },
+                    zIndex: 2,
+                }
+            }
+        ]);
+
+        cursorDecorations.set(username, newDecorations);
+    }
+
+    /**
+     * Removes all cursor decorations for a user (called when they disconnect).
+     */
+    function removeUserCursor(username) {
+        if (!editor) return;
+        const old = cursorDecorations.get(username);
+        if (old && old.length > 0) {
+            editor.deltaDecorations(old, []);
+        }
+        cursorDecorations.delete(username);
+        userColors.delete(username);
+
+        // Remove injected CSS
+        const safe = safeCssClass(username);
+        const styleEl = document.getElementById(`cursor-style-${safe}`);
+        if (styleEl) styleEl.remove();
+
+        console.log(`🧹 Removed cursor for: ${username}`);
+    }
+
+    /**
+     * Sends the current cursor position to the server (debounced at 50ms).
+     */
+    function sendCursorPosition() {
+        clearTimeout(cursorSendTimer);
+        cursorSendTimer = setTimeout(() => {
+            if (!stompClient || !stompClient.connected) return;
+            const position = editor.getPosition();
+            if (!position) return;
+
+            stompClient.send(
+                "/app/room/" + fileId + "/cursor",
+                {},
+                JSON.stringify({
+                    username: currentUsername,
+                    line: position.lineNumber,
+                    column: position.column
+                })
+            );
+        }, 50);
+    }
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     // INITIALIZE MONACO EDITOR
@@ -336,7 +561,7 @@
         // Load file content
         loadFile();
 
-        // Listen for content changes
+        // Broadcast content changes to the room
         editor.onDidChangeModelContent(function (e) {
             if (!isRemoteChange) {
                 const content = editor.getValue();
@@ -349,7 +574,11 @@
             isRemoteChange = false;
         });
 
-        // Initialize WebSocket after editor is ready
+        // ✅ NEW: Broadcast cursor position whenever it moves
+        editor.onDidChangeCursorPosition(function (e) {
+            sendCursorPosition();
+        });
+
         connectWebSocket();
     });
 
@@ -358,9 +587,7 @@
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
     function loadFile() {
-        fetch('/api/files/' + fileId, {
-            credentials: 'include'
-        })
+        fetch('/api/files/' + fileId, { credentials: 'include' })
             .then(response => response.json())
             .then(data => {
                 console.log("✅ File loaded:", data.name);
@@ -379,7 +606,6 @@
 
     function saveFile() {
         const content = editor.getValue();
-
         fetch('/api/files/' + fileId, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -387,14 +613,8 @@
             body: JSON.stringify({ content: content })
         })
             .then(response => response.json())
-            .then(data => {
-                console.log("✅ File saved");
-                alert('✅ File saved successfully!');
-            })
-            .catch(error => {
-                console.error("❌ Save error:", error);
-                alert('❌ Failed to save file');
-            });
+            .then(() => alert('✅ File saved successfully!'))
+            .catch(() => alert('❌ Failed to save file'));
     }
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -409,84 +629,67 @@
             console.log("✅ WebSocket connected");
             document.getElementById('connectionStatus').className = 'status-indicator status-connected';
 
-            // Get current username
             currentUsername = frame.headers['user-name'] || 'Unknown';
             console.log("👤 Username:", currentUsername);
 
-            // Subscribe to room edits
+            // ── Room edits ──────────────────────────────────
             stompClient.subscribe('/topic/room/' + fileId, function (message) {
-    const data = JSON.parse(message.body);
-    if (data.username !== currentUsername) {
-        isRemoteChange = true;
-        editor.setValue(data.content);
-
-        // ✅ FIX: setTimeout lets Monaco fully settle before re-applying markers
-        setTimeout(() => {
-            if (latestErrors.length > 0) {
-                highlightSyntaxErrors(latestErrors);
-            } else {
-                clearSyntaxErrors();
-            }
-        }, 50);
-    } else {
-        console.log("   ⏭️ Skipping my own edit");
-    }
-});
-
-            // Subscribe to cursor updates
-            stompClient.subscribe('/topic/room/' + fileId + '/cursors', function (message) {
-                // Handle cursor updates (placeholder for future implementation)
+                const data = JSON.parse(message.body);
+                if (data.username !== currentUsername) {
+                    isRemoteChange = true;
+                    editor.setValue(data.content);
+                    setTimeout(() => {
+                        if (latestErrors.length > 0) highlightSyntaxErrors(latestErrors);
+                        else clearSyntaxErrors();
+                    }, 50);
+                }
             });
 
-            // Subscribe to active users
+            // ── Cursor positions ─────────────────────────────
+            stompClient.subscribe('/topic/room/' + fileId + '/cursors', function (message) {
+                const data = JSON.parse(message.body);
+
+                // Ignore our own cursor — we already know where we are
+                if (data.username === currentUsername) return;
+
+                console.log(`👆 Cursor update — ${data.username} at ${data.line}:${data.column}`);
+                renderRemoteCursor(data.username, data.line, data.column);
+            });
+
+            // ── Active users ─────────────────────────────────
             stompClient.subscribe('/topic/room/' + fileId + '/users', function (message) {
                 const data = JSON.parse(message.body);
-                console.log("👥 Active users update:", data.users);
+                console.log("👥 Active users:", data.users);
+
+                // Remove cursors for anyone who has left
+                cursorDecorations.forEach((_, username) => {
+                    if (!data.users.includes(username)) {
+                        removeUserCursor(username);
+                    }
+                });
+
                 updateUsersList(data.users);
             });
 
-            // Subscribe to compiler output
+            // ── Compiler events ──────────────────────────────
             stompClient.subscribe('/topic/room/' + fileId + '/compiler', function (message) {
-                console.log("════════════════════════════════════════");
-                console.log("🔨 COMPILER EVENT RECEIVED");
-
                 try {
-                    const data = JSON.parse(message.body);
-                    console.log("   Event type:", data.event);
-                    console.log("   Full data:", data);
-                    handleCompilerEvent(data);
+                    handleCompilerEvent(JSON.parse(message.body));
                 } catch (e) {
                     console.error("❌ Failed to parse compiler message:", e);
-                    console.error("   Raw message:", message.body);
                 }
-
-                console.log("════════════════════════════════════════");
             });
 
-            // Subscribe to parser errors
-            stompClient.subscribe('/topic/room/' + fileId + '/errors', function(message) {
+            // ── Parser / syntax errors ───────────────────────
+            stompClient.subscribe('/topic/room/' + fileId + '/errors', function (message) {
                 const data = JSON.parse(message.body);
-                console.log("════════════════════════════════════════");
-                console.log("🔴 PARSER ERRORS RECEIVED");
-                console.log("   From:", data.username);
-                console.log("   Errors:", data.errors ? data.errors.length : 0);
-
-                // ✅ FIX: Store errors in cache so they survive future setValue() calls
                 latestErrors = data.errors || [];
-
-                if (latestErrors.length > 0) {
-                    console.log("🔴 Highlighting", latestErrors.length, "syntax errors");
-                    highlightSyntaxErrors(latestErrors);
-                    console.log("✅ Error markers set");
-                } else {
-                    console.log("✅ No errors - clearing markers");
-                    clearSyntaxErrors();
-                }
-
-                console.log("════════════════════════════════════════");
+                if (latestErrors.length > 0) highlightSyntaxErrors(latestErrors);
+                else clearSyntaxErrors();
             });
 
             console.log("📻 Subscribed to all topics for file:", fileId);
+
         }, function (error) {
             console.error("❌ WebSocket error:", error);
             document.getElementById('connectionStatus').className = 'status-indicator status-disconnected';
@@ -507,15 +710,22 @@
 
         usersList.innerHTML = '';
         users.forEach(user => {
+            const isMe = user === currentUsername;
             const isGuest = user.startsWith('Guest');
             const permission = isGuest ? 'VIEW' : 'EDIT';
+
+            // Use the assigned cursor colour for the dot (or grey for self)
+            const dotColor = isMe ? '#888' : (userColors.get(user) || '#888');
 
             const userDiv = document.createElement('div');
             userDiv.className = 'user-item';
             userDiv.innerHTML = `
-                <span class="user-name">${user}</span>
+                <span class="user-name">
+                    <span class="user-dot" style="background:${dotColor};"></span>
+                    ${user}${isMe ? ' (you)' : ''}
+                </span>
                 <span class="permission-badge permission-${permission.toLowerCase()}">${permission}</span>
-                ${isGuest ? `<button class="grant-edit-btn" onclick="grantEditPermission('${user}')">Grant Edit</button>` : ''}
+                ${isGuest && !isMe ? `<button class="grant-edit-btn" onclick="grantEditPermission('${user}')">Grant Edit</button>` : ''}
             `;
             usersList.appendChild(userDiv);
         });
@@ -526,25 +736,15 @@
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
     function grantEditPermission(guestName) {
-        console.log("🔓 Granting edit permission to:", guestName);
-
         fetch('/api/permissions/grant-edit?fileId=' + fileId + '&guestName=' + encodeURIComponent(guestName), {
             method: 'POST',
             credentials: 'include'
         })
         .then(response => {
-            if (response.ok) {
-                console.log("✅ Permission granted");
-                alert(`✅ Edit permission granted to ${guestName}`);
-            } else {
-                console.error("❌ Failed to grant permission");
-                alert('❌ Failed to grant permission');
-            }
+            if (response.ok) alert(`✅ Edit permission granted to ${guestName}`);
+            else alert('❌ Failed to grant permission');
         })
-        .catch(error => {
-            console.error("❌ Grant permission error:", error);
-            alert('❌ Error granting permission');
-        });
+        .catch(() => alert('❌ Error granting permission'));
     }
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -552,34 +752,20 @@
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
     function generateShareLink() {
-        console.log("🔗 Generating share link for file:", fileId);
-
         fetch('/api/room/create?fileId=' + fileId, {
             method: 'POST',
             credentials: 'include'
         })
-        .then(response => {
-            console.log("Response status:", response.status);
-            return response.json();
-        })
+        .then(r => r.json())
         .then(data => {
-            console.log("✅ Full response data:", data);
-            console.log("   Room ID:", data.roomId);
-            console.log("   Share URL:", data.url);
-
             if (data.url) {
                 document.getElementById('shareLinkInput').value = data.url;
                 document.getElementById('shareLink').style.display = 'block';
             } else {
-                console.error("❌ url not in response!");
-                console.log("Response keys:", Object.keys(data));
-                alert('❌ Error: Share URL not generated. Check console.');
+                alert('❌ Error: Share URL not generated.');
             }
         })
-        .catch(error => {
-            console.error("❌ Error generating share link:", error);
-            alert('❌ Failed to generate share link: ' + error.message);
-        });
+        .catch(error => alert('❌ Failed to generate share link: ' + error.message));
     }
 
     function copyShareLink() {
@@ -590,55 +776,32 @@
     }
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // RUN CODE FUNCTION
+    // RUN CODE
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
     function runCode() {
         const output = document.getElementById('output');
         const code = editor.getValue();
-
-        console.log("════════════════════════════════════════");
-        console.log("🚀 RUNNING CODE");
-        console.log("   File ID:", fileId);
-        console.log("   Code length:", code.length);
-
-        // Clear previous output
         output.style.color = "#0ff";
         output.textContent = "⏳ Compiling and running...\n";
 
-        // Send compilation request
         fetch('/api/compiler/run', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
-            body: JSON.stringify({
-                code: code,
-                fileId: fileId
-            })
+            body: JSON.stringify({ code: code, fileId: fileId })
         })
-        .then(response => response.json())
+        .then(r => r.json())
         .then(data => {
-            console.log("✅ Compilation response:", data);
-
             if (!data.success) {
-                if (data.stage === 'compilation') {
-                    displayCompilationErrors(data.compilationResult);
-                } else {
-                    displayExecutionError(data.executionResult);
-                }
-            } else {
-                console.log("✅ Code executed successfully");
+                if (data.stage === 'compilation') displayCompilationErrors(data.compilationResult);
+                else displayExecutionError(data.executionResult);
             }
         })
         .catch(error => {
-            console.error("❌ Run code error:", error);
             output.style.color = "#f44";
             output.textContent = "❌ Error: " + error.message;
         });
-
-        console.log("════════════════════════════════════════");
     }
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -647,102 +810,63 @@
 
     function handleCompilerEvent(data) {
         const output = document.getElementById('output');
-
-        switch(data.event) {
+        switch (data.event) {
             case 'compilation_started':
                 output.style.color = "#0ff";
                 output.textContent = "🔨 Compiling " + data.className + "...\n";
                 break;
-
             case 'compilation_success':
                 output.style.color = "#0f0";
-                output.textContent += "✅ Compilation successful (" + data.compilationTimeMs + "ms)\n";
-                output.textContent += "🚀 Executing...\n";
+                output.textContent += "✅ Compilation successful (" + data.compilationTimeMs + "ms)\n🚀 Executing...\n";
                 break;
-
             case 'compilation_failed':
                 output.style.color = "#f44";
                 output.textContent = "❌ COMPILATION FAILED\n\n";
-
-                if (data.errorMessage) {
-                    output.textContent += data.errorMessage + "\n\n";
-                }
-
+                if (data.errorMessage) output.textContent += data.errorMessage + "\n\n";
                 if (data.errors && data.errors.length > 0) {
                     output.textContent += "Errors:\n";
-                    data.errors.forEach(error => {
-                        output.textContent += `  Line ${error.lineNumber}: ${error.message}\n`;
-                    });
+                    data.errors.forEach(e => { output.textContent += `  Line ${e.lineNumber}: ${e.message}\n`; });
                 }
                 break;
-
             case 'execution_success':
                 output.style.color = "#0f0";
-                output.textContent = "✅ EXECUTION SUCCESSFUL (" + data.executionTimeMs + "ms)\n\n";
-                output.textContent += "Output:\n";
+                output.textContent = "✅ EXECUTION SUCCESSFUL (" + data.executionTimeMs + "ms)\n\nOutput:\n";
                 output.textContent += data.output || "(no output)";
                 break;
-
             case 'execution_failed':
                 output.style.color = "#f44";
-                output.textContent = "❌ EXECUTION FAILED\n\n";
-                output.textContent += "Error:\n";
+                output.textContent = "❌ EXECUTION FAILED\n\nError:\n";
                 output.textContent += data.error || data.exceptionMessage || "Unknown error";
                 output.textContent += "\n\nExit code: " + data.exitCode;
                 break;
-
-            default:
-                console.warn("Unknown compiler event:", data.event);
         }
     }
-
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // DISPLAY COMPILATION ERRORS (FALLBACK)
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
     function displayCompilationErrors(result) {
         const output = document.getElementById('output');
         output.style.color = "#f44";
         output.textContent = "❌ COMPILATION FAILED\n\n";
-
-        if (result.errorMessage) {
-            output.textContent += result.errorMessage + "\n\n";
-        }
-
+        if (result.errorMessage) output.textContent += result.errorMessage + "\n\n";
         if (result.errors && result.errors.length > 0) {
             output.textContent += "Errors:\n";
-            result.errors.forEach(error => {
-                output.textContent += `  Line ${error.lineNumber}: ${error.message}\n`;
-            });
+            result.errors.forEach(e => { output.textContent += `  Line ${e.lineNumber}: ${e.message}\n`; });
         }
     }
-
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // DISPLAY EXECUTION ERROR (FALLBACK)
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
     function displayExecutionError(result) {
         const output = document.getElementById('output');
         output.style.color = "#f44";
-        output.textContent = "❌ EXECUTION FAILED\n\n";
-        output.textContent += "Error:\n";
+        output.textContent = "❌ EXECUTION FAILED\n\nError:\n";
         output.textContent += result.error || result.exceptionMessage || "Unknown error";
         output.textContent += "\n\nExit code: " + result.exitCode;
     }
 
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // HIGHLIGHT SYNTAX ERRORS IN MONACO EDITOR
+    // ERROR HIGHLIGHTING
     // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
     function highlightSyntaxErrors(errors) {
-        console.log("🔴 Highlighting", errors.length, "syntax errors");
-
-        if (!editor) {
-            console.error("❌ Editor not initialized");
-            return;
-        }
-
-        // Convert parser errors to Monaco markers
+        if (!editor) return;
         const markers = errors.map(err => ({
             startLineNumber: err.line,
             startColumn: err.column || 1,
@@ -751,37 +875,15 @@
             message: err.message || "Syntax error",
             severity: monaco.MarkerSeverity.Error
         }));
-
-        // Set markers in Monaco editor
         const model = editor.getModel();
-        if (model) {
-            monaco.editor.setModelMarkers(model, 'parser', markers);
-            console.log("✅ Error markers set");
-        } else {
-            console.error("❌ Editor model not found");
-        }
+        if (model) monaco.editor.setModelMarkers(model, 'parser', markers);
     }
-
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // CLEAR SYNTAX ERROR HIGHLIGHTING
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
     function clearSyntaxErrors() {
-        console.log("🧹 Clearing error markers");
-
-        if (!editor) {
-            return;
-        }
-
+        if (!editor) return;
         const model = editor.getModel();
-        if (model) {
-            monaco.editor.setModelMarkers(model, 'parser', []);
-        }
+        if (model) monaco.editor.setModelMarkers(model, 'parser', []);
     }
-
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-    // CLEAR OUTPUT
-    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
     function clearOutput() {
         document.getElementById('output').textContent = "Ready to run Java code...";
