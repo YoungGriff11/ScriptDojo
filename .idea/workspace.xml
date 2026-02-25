@@ -5,9 +5,18 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="55cddaad-c591-45a7-bea1-5228269cadae" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/controller/SpaController.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/resources/static/editor.html" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/resources/static/editor.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/resources/static/room-guest.html" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/resources/static/room-guest.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/config/SecurityConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/config/SecurityConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/scriptdojo-frontend/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/scriptdojo-frontend/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/scriptdojo-frontend/eslint.config.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/scriptdojo-frontend/eslint.config.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/scriptdojo-frontend/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/scriptdojo-frontend/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/scriptdojo-frontend/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/scriptdojo-frontend/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/scriptdojo-frontend/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/scriptdojo-frontend/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/scriptdojo-frontend/src/App.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/scriptdojo-frontend/src/App.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/scriptdojo-frontend/src/components/Editor.jsx" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/scriptdojo-frontend/src/main.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/scriptdojo-frontend/src/main.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/scriptdojo-frontend/vite.config.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/scriptdojo-frontend/vite.config.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
