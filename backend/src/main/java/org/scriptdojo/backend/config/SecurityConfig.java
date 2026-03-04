@@ -35,28 +35,31 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
+                                "/login",
+                                "/signup",
                                 "/login.html",
                                 "/signup.html",
                                 "/api/auth/**",
-                                "/ws/**",              // ← WebSocket endpoint must be public
-                                "/room-guest.html",    // ← Guest page must be public
-                                "/room/**",            // ← Room join endpoint must be public
+                                "/api/room/join/**",
+                                "/ws/**",
+                                "/room-guest",
+                                "/room/**",
                                 "/static/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
 
                 .formLogin(form -> form
-                        .loginPage("/login.html")
+                        .loginPage("/login")
                         .loginProcessingUrl("/perform_login")
-                        .defaultSuccessUrl("/dashboard.html", true)
-                        .failureUrl("/login.html?error=true")
+                        .defaultSuccessUrl("/dashboard", true)
+                        .failureUrl("/login?error=true")
                         .permitAll()
                 )
 
                 .logout(logout -> logout
                         .permitAll()
-                        .logoutSuccessUrl("/login.html")
+                        .logoutSuccessUrl("/login")
                 );
 
         return http.build();

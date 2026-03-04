@@ -11,7 +11,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.view.RedirectView;
 
 import java.time.LocalDateTime;
 import java.util.Base64;
@@ -36,14 +35,11 @@ public class RoomController {
             @RequestParam Long fileId,
             Authentication auth
     ) {
-        // Get current user
         CustomUserDetails user = (CustomUserDetails) auth.getPrincipal();
         Long hostId = user.getId();
 
-        // Generate unique room ID (11 chars)
         String roomId = generateRoomId();
 
-        // Create room entity
         RoomEntity room = new RoomEntity();
         room.setId(roomId);
         room.setFileId(fileId);
@@ -52,7 +48,7 @@ public class RoomController {
 
         roomRepository.save(room);
 
-        String shareUrl = "http://localhost:8080/room/" + roomId;
+        String shareUrl = "http://localhost:5173/room/" + roomId;
 
         log.info("════════════════════════════════════════════════════");
         log.info("🔗 ROOM CREATED");
@@ -69,48 +65,37 @@ public class RoomController {
     }
 
     /**
-     * Guest joins a room via share link
-     * GET /room/{roomId}
+     * Guest fetches room data via React frontend
+     * GET /api/room/join/{roomId}
      */
-    @GetMapping("/room/{roomId}")
-    public RedirectView joinRoom(@PathVariable String roomId) {
+    @GetMapping("/api/room/join/{roomId}")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> getRoomData(@PathVariable String roomId) {
         log.info("════════════════════════════════════════════════════");
         log.info("👤 GUEST JOINING ROOM");
         log.info("   Room ID: {}", roomId);
 
-        // Find room
         RoomEntity room = roomRepository.findById(roomId)
                 .orElseThrow(() -> new RuntimeException("Room not found: " + roomId));
 
-        // Get file
         FileEntity file = fileService.getFileById(room.getFileId());
+
+        String encodedContent = Base64.getEncoder()
+                .encodeToString(file.getContent().getBytes());
+
+        String guestName = generateGuestName();
 
         log.info("   File ID: {}", file.getId());
         log.info("   File Name: {}", file.getName());
-        log.info("   Content Length: {} characters", file.getContent().length());
-
-        // Encode file content as Base64 for URL
-        String encodedContent = Base64.getEncoder().encodeToString(file.getContent().getBytes());
-
-        // ✅ GENERATE GUEST NAME
-        String guestName = generateGuestName();
         log.info("   Guest Name: {}", guestName);
-
-        // Build redirect URL with all data INCLUDING guestName
-        String redirectUrl = String.format(
-                "/room-guest.html?roomId=%s&fileId=%d&fileName=%s&content=%s&guestName=%s",
-                roomId,
-                file.getId(),
-                file.getName(),
-                encodedContent,
-                guestName
-        );
-
-        log.info("✅ Redirecting guest to room-guest.html");
-        log.info("   Redirect URL: {}", redirectUrl);
         log.info("════════════════════════════════════════════════════");
 
-        return new RedirectView(redirectUrl);
+        return ResponseEntity.ok(Map.of(
+                "fileId",    file.getId(),
+                "fileName",  file.getName(),
+                "content",   encodedContent,
+                "guestName", guestName
+        ));
     }
 
     /**

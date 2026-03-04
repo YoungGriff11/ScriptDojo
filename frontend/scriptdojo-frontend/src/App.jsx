@@ -16,6 +16,7 @@ function App() {
         <Route path="/dashboard"  element={<DashboardPage />} />
         <Route path="/editor"     element={<EditorPage />} />
         <Route path="/room-guest" element={<GuestPage />} />
+        <Route path="/room/:roomId" element={<GuestPage />} />
 
         {/* Catch-all: redirect unknown routes to welcome */}
         <Route path="*" element={<Navigate to="/" replace />} />
