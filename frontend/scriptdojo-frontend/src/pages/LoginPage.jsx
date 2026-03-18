@@ -5,41 +5,58 @@ export default function LoginPage() {
   const navigate = useNavigate()
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  
 
-  async function handleSubmit(e) {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
+async function handleSubmit(e) {
+  e.preventDefault()
+  setLoading(true)
+  setError('')
 
-    const username = e.target.username.value
-    const password = e.target.password.value
+  const username = e.target.username.value.trim()
+  const password = e.target.password.value
 
-    // Spring Security expects form-encoded data, not JSON
-    const formData = new URLSearchParams()
-    formData.append('username', username)
-    formData.append('password', password)
+  if (!username) {
+    setError('Please enter your username.')
+    setLoading(false)
+    return
+  }
 
-    try {
-      const res = await fetch('/perform_login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        credentials: 'include',
-        body: formData,
-        redirect: 'manual', // prevent browser auto-following the redirect
-      })
+  if (!password) {
+    setError('Please enter your password.')
+    setLoading(false)
+    return
+  }
 
-      // Spring returns a redirect (302) on success
-      if (res.status === 200 || res.status === 302 || res.type === 'opaqueredirect') {
+  const formData = new URLSearchParams()
+  formData.append('username', username)
+  formData.append('password', password)
+
+  try {
+    const res = await fetch('/perform_login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      credentials: 'include',
+      body: formData,
+      redirect: 'manual',
+    })
+
+    if (res.type === 'opaqueredirect' || res.status === 302 || res.status === 200) {
+      // Verify the login actually worked by checking session
+      const check = await fetch('/api/user/me', { credentials: 'include' })
+      if (check.ok) {
         navigate('/dashboard')
       } else {
-        setError('Invalid username or password.')
+        setError('Invalid username or password. Please try again.')
       }
-    } catch {
-      setError('Network error. Is the backend running?')
-    } finally {
-      setLoading(false)
+    } else {
+      setError('Invalid username or password. Please try again.')
     }
+  } catch {
+    setError('Invalid username or password')
+  } finally {
+    setLoading(false)
   }
+}
 
   return (
     <div style={styles.body}>

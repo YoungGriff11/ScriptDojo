@@ -6,12 +6,12 @@
   <component name="ChangeListManager">
     <list default="true" id="55cddaad-c591-45a7-bea1-5228269cadae" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/config/SecurityConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/config/SecurityConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/controller/RoomController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/controller/RoomController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/scriptdojo-frontend/src/App.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/scriptdojo-frontend/src/App.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/scriptdojo-frontend/src/pages/EditorPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/scriptdojo-frontend/src/pages/EditorPage.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/scriptdojo-frontend/src/pages/GuestPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/scriptdojo-frontend/src/pages/GuestPage.jsx" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/frontend/scriptdojo-frontend/vite.config.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/scriptdojo-frontend/vite.config.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/scriptdojo-frontend/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/scriptdojo-frontend/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/scriptdojo-frontend/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/scriptdojo-frontend/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/scriptdojo-frontend/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/scriptdojo-frontend/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/scriptdojo-frontend/src/pages/LoginPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/scriptdojo-frontend/src/pages/LoginPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/scriptdojo-frontend/src/pages/SignupPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/scriptdojo-frontend/src/pages/SignupPage.jsx" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
