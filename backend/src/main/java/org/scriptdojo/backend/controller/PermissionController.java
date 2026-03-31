@@ -45,8 +45,8 @@ public class PermissionController {
         log.info("   Granted By: {}", auth.getName());
 
         // Verify requester is the file owner
-        // TODO: Get current user ID from auth - implement based on your CustomUserDetails
-        Long currentUserId = 1000L; // Placeholder
+
+        Long currentUserId = ((org.scriptdojo.backend.security.CustomUserDetails) auth.getPrincipal()).getId();
 
         if (!fileService.isOwner(fileId, currentUserId)) {
             log.warn("❌ Permission denied - not file owner");
