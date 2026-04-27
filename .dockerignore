@@ -1,0 +1,25 @@
+# ─── Frontend ─────────────────────────────────────────────────────────────────
+frontend/scriptdojo-frontend/node_modules
+frontend/scriptdojo-frontend/dist
+frontend/scriptdojo-frontend/test-results
+frontend/scriptdojo-frontend/.playwright
+
+# ─── Backend ──────────────────────────────────────────────────────────────────
+backend/target
+backend/.mvn/repository
+
+# ─── IDE and OS files ─────────────────────────────────────────────────────────
+.idea
+.vscode
+*.iml
+.DS_Store
+Thumbs.db
+
+# ─── Git ──────────────────────────────────────────────────────────────────────
+.git
+.gitignore
+.gitattributes
+
+# ─── Docs ─────────────────────────────────────────────────────────────────────
+docs
+*.md

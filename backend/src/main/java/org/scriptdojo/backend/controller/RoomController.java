@@ -7,6 +7,7 @@ import org.scriptdojo.backend.entity.RoomEntity;
 import org.scriptdojo.backend.repository.RoomRepository;
 import org.scriptdojo.backend.service.FileService;
 import org.scriptdojo.backend.security.CustomUserDetails;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -24,6 +25,9 @@ public class RoomController {
 
     private final RoomRepository roomRepository;
     private final FileService fileService;
+
+    @Value("${app.base-url:http://localhost:8080}")
+    private String baseUrl;
 
     /**
      * Create a new collaboration room for a file
@@ -48,7 +52,7 @@ public class RoomController {
 
         roomRepository.save(room);
 
-        String shareUrl = "http://localhost:5173/room/" + roomId;
+        String shareUrl = baseUrl + "/room/" + roomId;
 
         log.info("════════════════════════════════════════════════════");
         log.info("🔗 ROOM CREATED");

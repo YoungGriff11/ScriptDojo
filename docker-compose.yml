@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+
+  # ─── MySQL Database ──────────────────────────────────────────────────────────
+  db:
+    image: mysql:8.0
+    container_name: scriptdojo-db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: scriptdojo
+      MYSQL_USER: scriptdojo
+      MYSQL_PASSWORD: ScriptDojo2024!
+      MYSQL_ROOT_PASSWORD: ScriptDojoRoot2024!
+    ports:
+      - "3306:3306"
+    volumes:
+      - scriptdojo-db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "scriptdojo", "-pScriptDojo2024!"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - scriptdojo-network
+
+  # ─── Spring Boot Application ─────────────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: scriptdojo-app
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      APP_BASE_URL: http://localhost:8080
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - scriptdojo-network
+
+# ─── Persistent volume for database data ─────────────────────────────────────
+volumes:
+  scriptdojo-db-data:
+
+# ─── Internal network for containers to talk to each other ───────────────────
+networks:
+  scriptdojo-network:
+    driver: bridge

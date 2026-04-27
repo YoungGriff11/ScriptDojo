@@ -25,25 +25,41 @@ public class SecurityConfig {
         http
                 .cors(cors -> cors.configurationSource(request -> {
                     var config = new org.springframework.web.cors.CorsConfiguration();
-                    config.setAllowedOrigins(java.util.List.of("http://localhost:5173"));
+                    config.setAllowedOrigins(java.util.List.of(
+                            "http://localhost:5173",   // Vite dev server
+                            "http://localhost:8080",   // Docker / production
+                            "https://scriptdojo.ie"   // Production domain (when live)
+                    ));
                     config.setAllowedMethods(java.util.List.of("GET","POST","PUT","DELETE","OPTIONS"));
                     config.setAllowedHeaders(java.util.List.of("*"));
                     config.setAllowCredentials(true);
                     return config;
                 }))
-                .csrf(csrf -> csrf.disable())  // Disabled for WebSocket compatibility
+                .csrf(csrf -> csrf.disable())
 
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
+                                // React static assets
+                                "/",
+                                "/index.html",
+                                "/assets/**",
+                                "/favicon.ico",
+                                "/vite.svg",
+                                // React routes - all served by SpaController → index.html
                                 "/login",
                                 "/signup",
-                                "/login.html",
-                                "/signup.html",
+                                "/dashboard",
+                                "/editor",
+                                "/room/**",
+                                // API public endpoints
                                 "/api/auth/**",
                                 "/api/room/join/**",
+                                // WebSocket
                                 "/ws/**",
+                                // Legacy
+                                "/login.html",
+                                "/signup.html",
                                 "/room-guest",
-                                "/room/**",
                                 "/static/**"
                         ).permitAll()
                         .anyRequest().authenticated()

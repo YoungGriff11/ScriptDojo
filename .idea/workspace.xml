@@ -5,23 +5,16 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="55cddaad-c591-45a7-bea1-5228269cadae" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/backend/src/test/java/org/scriptdojo/backend/config/SecurityConfigTest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/src/test/java/org/scriptdojo/backend/controller/AuthControllerTest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/src/test/java/org/scriptdojo/backend/controller/CompilerControllerTest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/src/test/java/org/scriptdojo/backend/controller/FileControllerTest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/src/test/java/org/scriptdojo/backend/controller/PermissionControllerTest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/src/test/java/org/scriptdojo/backend/controller/RoomControllerTest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/src/test/java/org/scriptdojo/backend/security/SecurityTest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/src/test/java/org/scriptdojo/backend/service/ActiveUserServiceTest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/src/test/java/org/scriptdojo/backend/service/CompilationServiceTest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/src/test/java/org/scriptdojo/backend/service/ExecutionServiceTest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/src/test/java/org/scriptdojo/backend/service/PermissionServiceTest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/src/test/java/org/scriptdojo/backend/service/UserServiceTest.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/backend/src/test/resources/application-test.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.dockerignore" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backend/Dockerfile" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/backend/src/main/resources/application-docker.properties" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docker-compose.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/backend/pom.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/controller/PermissionController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/controller/PermissionController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/test/java/org/scriptdojo/backend/BackendApplicationTests.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/config/SecurityConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/config/SecurityConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/controller/RoomController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/controller/RoomController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/controller/SpaController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/controller/SpaController.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -76,51 +69,51 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Application.BackendApplication.executor": "Run",
-    "DefaultHtmlFileTemplate": "HTML File",
-    "JUnit.ActiveUsersServiceTest.executor": "Run",
-    "JUnit.AuthControllerTest.executor": "Run",
-    "JUnit.CompilationServiceTest.executor": "Run",
-    "JUnit.CompilerControllerTest.compileAndRun_unauthenticated_returns401.executor": "Run",
-    "JUnit.CompilerControllerTest.executor": "Run",
-    "JUnit.ExecutionServiceTest.executor": "Run",
-    "JUnit.FileControllerTest.executor": "Run",
-    "JUnit.PermissionControllerTest.executor": "Run",
-    "JUnit.PermissionControllerTest.revokeEdit_ownerRevokesGuest_returns200.executor": "Run",
-    "JUnit.PermissionServiceTest.executor": "Run",
-    "JUnit.RoomControllerTest.executor": "Run",
-    "JUnit.SanityTest.sanityCheck.executor": "Run",
-    "JUnit.SecurityConfigTest.executor": "Run",
-    "JUnit.SecurityTest.executor": "Run",
-    "JUnit.UserServiceTest.executor": "Run",
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RequestMappingsPanelOrder0": "0",
-    "RequestMappingsPanelOrder1": "1",
-    "RequestMappingsPanelWidth0": "75",
-    "RequestMappingsPanelWidth1": "75",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "Spring Boot.BackendApplication.executor": "Run",
-    "git-widget-placeholder": "main",
-    "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "C:/Users/Conor School/OneDrive - National College of Ireland/Documents/4th Year/scriptdojo",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "project.structure.last.edited": "Modules",
-    "project.structure.proportion": "0.0",
-    "project.structure.side.proportion": "0.2",
-    "run.code.analysis.last.selected.profile": "pProject Default",
-    "settings.editor.selected.configurable": "org.antlr.intellij.plugin.configdialogs.ANTLRv4ProjectSettings",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Application.BackendApplication.executor&quot;: &quot;Run&quot;,
+    &quot;DefaultHtmlFileTemplate&quot;: &quot;HTML File&quot;,
+    &quot;JUnit.ActiveUsersServiceTest.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.AuthControllerTest.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.CompilationServiceTest.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.CompilerControllerTest.compileAndRun_unauthenticated_returns401.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.CompilerControllerTest.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.ExecutionServiceTest.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.FileControllerTest.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.PermissionControllerTest.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.PermissionControllerTest.revokeEdit_ownerRevokesGuest_returns200.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.PermissionServiceTest.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.RoomControllerTest.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.SanityTest.sanityCheck.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.SecurityConfigTest.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.SecurityTest.executor&quot;: &quot;Run&quot;,
+    &quot;JUnit.UserServiceTest.executor&quot;: &quot;Run&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RequestMappingsPanelOrder0&quot;: &quot;0&quot;,
+    &quot;RequestMappingsPanelOrder1&quot;: &quot;1&quot;,
+    &quot;RequestMappingsPanelWidth0&quot;: &quot;75&quot;,
+    &quot;RequestMappingsPanelWidth1&quot;: &quot;75&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;Spring Boot.BackendApplication.executor&quot;: &quot;Run&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/Conor School/OneDrive - National College of Ireland/Documents/4th Year/scriptdojo&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;project.structure.last.edited&quot;: &quot;Modules&quot;,
+    &quot;project.structure.proportion&quot;: &quot;0.0&quot;,
+    &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;,
+    &quot;run.code.analysis.last.selected.profile&quot;: &quot;pProject Default&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;org.antlr.intellij.plugin.configdialogs.ANTLRv4ProjectSettings&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RunManager" selected="JUnit.UserServiceTest">
     <configuration name="ActiveUsersServiceTest" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
       <module name="backend" />
