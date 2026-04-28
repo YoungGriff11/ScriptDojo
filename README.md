@@ -52,7 +52,7 @@ Docker Desktop installed and running
 
 Steps
 1. Clone the repository
-   bashgit clone https://gitlab.com/your-username/scriptdojo.git
+   bashgit clone https://gitlab.com/YoungGriff11/scriptdojo.git
    cd scriptdojo
 2. Start the application
    bashdocker-compose up --build
