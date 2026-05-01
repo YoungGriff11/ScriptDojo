@@ -5,7 +5,25 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="55cddaad-c591-45a7-bea1-5228269cadae" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/config/SecurityConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/config/SecurityConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/config/WebSocketConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/config/WebSocketConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/config/WebSocketEventListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/config/WebSocketEventListener.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/controller/AuthController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/controller/AuthController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/controller/CollaborationController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/controller/CollaborationController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/controller/CompilerController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/controller/CompilerController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/controller/FileController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/controller/FileController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/controller/ParserController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/controller/ParserController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/controller/PermissionController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/controller/PermissionController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/controller/RoomController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/controller/RoomController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/controller/SpaController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/controller/SpaController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/controller/UserController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/controller/UserController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/entity/FileEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/entity/FileEntity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/entity/PermissionEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/entity/PermissionEntity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/entity/PermissionRole.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/entity/PermissionRole.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/entity/RoomEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/entity/RoomEntity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/entity/UserEntity.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/org/scriptdojo/backend/entity/UserEntity.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/resources/application.properties" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
