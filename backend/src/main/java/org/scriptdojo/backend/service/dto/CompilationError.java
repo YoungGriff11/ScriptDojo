@@ -5,34 +5,38 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * DTO representing a single error or warning produced by the Java compiler
+ * during a compilation attempt in {@link org.scriptdojo.backend.service.CompilationService}.
+ * Collected into a list on {@link CompilationResult} and broadcast to all room
+ * participants via the compiler WebSocket channel when compilation fails, so
+ * the output panel can display structured error details rather than raw compiler output.
+ */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class CompilationError {
 
-    /**
-     * Line number where error occurred
-     */
+    /** The 1-based line number in the source file where the error occurred. */
     private long lineNumber;
 
-    /**
-     * Column number where error occurred
-     */
+    /** The 1-based column number within the line where the error occurred. */
     private long columnNumber;
 
-    /**
-     * Error message from compiler
-     */
+    /** The human-readable error message produced by the Java compiler. */
     private String message;
 
     /**
-     * Error kind (ERROR, WARNING, etc.)
+     * The severity category assigned by the compiler.
+     * Typically "ERROR" for fatal issues or "WARNING" for non-fatal diagnostics.
      */
     private String kind;
 
     /**
-     * Source code snippet around error
+     * The source code snippet surrounding the error location.
+     * Displayed in the output panel to give participants immediate context
+     * without needing to locate the error in the editor manually.
      */
     private String code;
 }

@@ -16,7 +16,6 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 
 /**
  * WebSocket and STOMP messaging configuration for ScriptDojo.
- *
  * Responsibilities:
  * - Registers the /ws endpoint that clients connect to via SockJS
  * - Configures the in-memory message broker and application destination prefix
@@ -30,10 +29,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     /**
      * Configures the message broker that routes messages between clients.
-     *
      * - /topic: prefix for broker-handled destinations (pub/sub fan-out).
      *   Messages sent to e.g. /topic/room/abc are broadcast to all subscribers.
-     *
      * - /app: prefix for application-handled destinations. Messages sent to
      *   e.g. /app/editor/abc are routed to a @MessageMapping method in a
      *   @Controller before optionally being forwarded to the broker.
@@ -46,7 +43,6 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     /**
      * Registers the WebSocket handshake endpoint that clients connect to.
-     *
      * - /ws: the URL clients use to initiate the WebSocket connection
      * - setAllowedOriginPatterns("*"): permits connections from any origin.
      *   CORS for REST is handled separately in SecurityConfig; this covers
@@ -63,13 +59,11 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     /**
      * Registers a channel interceptor on the inbound message channel.
-     *
      * The interceptor runs before every inbound STOMP frame is processed.
      * Its sole responsibility is to capture the guest username from the
      * STOMP CONNECT frame and store it in the WebSocket session attributes,
      * making it available to @MessageMapping handlers for the lifetime of
      * the connection.
-     *
      * Background: authenticated hosts have a Spring Security Principal that
      * controllers can read directly. Guests are unauthenticated (no Principal),
      * so their chosen display name is passed as a custom STOMP header on
@@ -82,7 +76,6 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
             /**
              * Intercepts each inbound message before it is dispatched.
              * Only acts on STOMP CONNECT frames; all other frame types pass through unchanged.
-             *
              * @param message the inbound STOMP message
              * @param channel the channel the message is being sent on
              * @return the (possibly mutated) message to continue processing

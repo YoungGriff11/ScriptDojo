@@ -8,22 +8,18 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 
 /**
  * REST controller for file management operations in ScriptDojo.
- *
  * Provides standard CRUD endpoints for the files owned by the authenticated user.
  * All endpoints require authentication (enforced by SecurityConfig) and operate
  * on the currently logged-in user's files unless a file ID is supplied directly.
- *
  * A consistent two-step pattern is used for mutating operations (create, update,
  * rename): the service method returns a FileEntity after persistence, which is
  * then immediately re-fetched as a FileDTO via getFileDTOById(). This ensures the
  * response always reflects the fully populated database state (including any
  * server-side defaults or computed fields) rather than the raw entity.
- *
  * Base path: /api/files
  */
 @RestController
@@ -36,9 +32,7 @@ public class FileController {
 
     /**
      * Returns all files belonging to the currently authenticated user.
-     *
      * GET /api/files
-     *
      * @param auth the Spring Security authentication object; principal is cast to
      *             CustomUserDetails to access the internal user ID
      * @return 200 OK with the list of the user's files as DTOs (may be empty)
@@ -57,9 +51,7 @@ public class FileController {
 
     /**
      * Returns a single file by its ID.
-     *
      * GET /api/files/{id}
-     *
      * @param id the database ID of the file to retrieve
      * @return 200 OK with the file as a DTO
      */
@@ -72,13 +64,10 @@ public class FileController {
 
     /**
      * Creates a new file for the currently authenticated user.
-     *
      * The file is created with the name, content, and language supplied in the
      * request body. The response is re-fetched from the database after creation
      * to include any server-assigned fields (e.g. generated ID, creation timestamp).
-     *
      * POST /api/files
-     *
      * @param dto  the file data to create; name, content, and language are read
      *             from this payload (id and other read-only fields are ignored)
      * @param auth the Spring Security authentication object used to associate
@@ -111,9 +100,7 @@ public class FileController {
      * Updates the metadata (name and/or language) of an existing file.
      * File content is not modified by this endpoint — use PUT /api/files/{id}/content
      * for content-only updates.
-     *
      * PUT /api/files/{id}
-     *
      * @param id  the database ID of the file to update
      * @param dto the updated metadata; only name and language fields are applied
      * @return 200 OK with the updated file as a fully populated DTO
@@ -133,12 +120,9 @@ public class FileController {
 
     /**
      * Replaces the content of an existing file without modifying its metadata.
-     *
      * This endpoint is also called internally by CollaborationController on every
      * real-time edit to persist the latest editor state to the database.
-     *
      * PUT /api/files/{id}/content
-     *
      * @param id         the database ID of the file to update
      * @param newContent the complete replacement content for the file
      * @return 200 OK with the updated file as a fully populated DTO
@@ -158,13 +142,10 @@ public class FileController {
 
     /**
      * Renames an existing file.
-     *
      * Separated from the general metadata update endpoint to allow the frontend
      * to trigger a rename-specific action (e.g. inline rename in the file tree)
      * without constructing a full FileDTO payload.
-     *
      * PUT /api/files/{id}/rename
-     *
      * @param id      the database ID of the file to rename
      * @param newName the replacement name for the file, supplied as a query parameter
      * @return 200 OK with the renamed file as a fully populated DTO
@@ -183,9 +164,7 @@ public class FileController {
 
     /**
      * Permanently deletes a file by its ID.
-     *
      * DELETE /api/files/{id}
-     *
      * @param id the database ID of the file to delete
      * @return 204 No Content on successful deletion
      */

@@ -6,22 +6,17 @@ import java.time.LocalDateTime;
 
 /**
  * JPA entity representing a collaboration room in ScriptDojo.
- *
  * A room is a lightweight join record that links a shareable alphanumeric ID
  * to a specific file and its host. It is created when a host clicks "Share"
  * on a file and persists until manually deleted (rooms are not currently
  * expired or cleaned up automatically).
- *
  * Unlike most entities in the application, the primary key is a
  * human-generated string (an 11-character alphanumeric ID produced by
- * {@link org.scriptdojo.backend.controller.RoomController#generateRoomId()})
  * rather than a database auto-increment value. This ID forms the path segment
  * of the shareable URL (e.g. /room/abc123xyz89) and is safe to expose publicly.
- *
  * Relationships are stored as plain foreign key columns (fileId, hostId) rather
  * than @ManyToOne associations to keep the entity lightweight — neither the file
  * nor the host entity is navigated to from a room record directly.
- *
  * Note: Lombok is not used here — accessors and constructors are written
  * explicitly. Maps to the "rooms" table in the database.
  */
@@ -78,7 +73,6 @@ public class RoomEntity {
      * Convenience constructor for programmatic room creation.
      * Used by {@link org.scriptdojo.backend.controller.RoomController}
      * when a host creates a new room.
-     *
      * @param id     the pre-generated alphanumeric room ID
      * @param fileId the ID of the file being shared
      * @param hostId the user ID of the host creating the room
@@ -90,7 +84,7 @@ public class RoomEntity {
         this.createdAt = LocalDateTime.now();
     }
 
-    // ── Getters and setters ───────────────────────────────────────────────────
+    // ─ Getters and setters
 
     /** Returns the shareable room ID. */
     public String getId() {

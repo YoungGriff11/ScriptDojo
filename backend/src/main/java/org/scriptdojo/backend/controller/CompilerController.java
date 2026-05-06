@@ -10,7 +10,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
@@ -19,18 +18,15 @@ import java.util.Map;
 /**
  * REST controller that compiles and executes Java source code submitted from
  * the ScriptDojo collaborative editor.
- *
  * Exposes a single endpoint (POST /api/compiler/run) that orchestrates a
  * two-stage pipeline:
  *   1. Compilation — source code is compiled via {@link CompilationService}
  *      using the javax.tools.JavaCompiler API
  *   2. Execution   — the compiled bytecode is run in an isolated subprocess
  *      via {@link ExecutionService}
- *
  * Each stage broadcasts its outcome to the room's compiler WebSocket channel
  * (/topic/room/{fileId}/compiler) so all participants see live feedback in
  * their output panel regardless of who triggered the run.
- *
  * The pipeline short-circuits after compilation if errors are found — execution
  * is only attempted when compilation succeeds.
  */
@@ -52,21 +48,17 @@ public class CompilerController {
 
     /**
      * Compiles and executes Java source code submitted from the editor.
-     *
      * Orchestrates the full compile → execute pipeline and broadcasts the outcome
      * of each stage to all participants in the room via the compiler WebSocket channel.
      * The HTTP response always returns 200 OK; success or failure is communicated
      * through the response body and the WebSocket broadcasts, not the HTTP status code.
-     *
      * Pipeline:
      *   compilation_started  → broadcast immediately so the UI can show a loading state
      *   compilation_failed   → broadcast + return early if the source has errors
      *   compilation_success  → broadcast, then proceed to execution
      *   execution_success /
      *   execution_failed     → broadcast the final outcome with output or error details
-     *
      * POST /api/compiler/run
-     *
      * @param request JSON body containing:
      *                "code"   — the full Java source code to compile and run
      *                "fileId" — the room/file ID used to route WebSocket broadcasts
@@ -137,7 +129,7 @@ public class CompilerController {
                 "compilationTimeMs", compilationResult.getCompilationTimeMs()
         ));
 
-        // ── Stage 2: Execute
+        // ─ Stage 2: Execute
         // Resolve the directory where the compiler wrote the .class file, then
         // hand it to ExecutionService to run in an isolated subprocess
         Path compiledClassPath = Paths.get(compilationResult.getOutputDirectory());
@@ -164,7 +156,7 @@ public class CompilerController {
 
         log.info("════════════════════════════════════════════════════");
 
-        // ── Return complete pipeline result
+        // ─ Return complete pipeline result
         // Both stages are included in the HTTP response so the triggering client
         // can inspect the full result if needed, even though all participants
         // already received the outcome via WebSocket broadcast
@@ -179,11 +171,9 @@ public class CompilerController {
 
     /**
      * Publishes a compiler stage event to all participants in a room.
-     *
      * Enriches the provided data map with the event name and fileId, then sends
      * it to /topic/room/{fileId}/compiler. All subscribers (the triggering host
      * and any watching guests) receive the message and update their output panel.
-     *
      * @param fileId the room/file ID that identifies the target WebSocket topic
      * @param event  the event name (e.g. "compilation_started", "execution_success")
      * @param data   stage-specific payload fields to include in the broadcast

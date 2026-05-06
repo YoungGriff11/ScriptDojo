@@ -6,23 +6,19 @@ import lombok.*;
 
 /**
  * JPA entity representing a source code file owned by a registered user.
- *
  * Each file has a name, content, and language, and belongs to exactly one
  * {@link UserEntity} via a many-to-one relationship. Files are the central
  * resource in ScriptDojo — they are opened in the editor, shared via rooms,
  * and collaboratively edited in real time.
- *
  * Timestamp management:
  * - createdAt is set at object construction time and never modified
  * - updatedAt is initialised at construction and automatically refreshed
  *   by the {@link #preUpdate()} JPA lifecycle callback on every save
- *
  * Lombok annotations used:
  * - @Getter / @Setter   — generates accessors for all fields
  * - @NoArgsConstructor  — required by JPA (entities must have a no-arg constructor)
  * - @AllArgsConstructor — supports programmatic construction with all fields
  * - @Builder            — enables the fluent builder pattern for test and service code
- *
  * Maps to the "files" table in the database.
  */
 @Entity

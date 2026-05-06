@@ -37,7 +37,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // ── CORS ──────────────────────────────────────────────────────────────────
+                // ─ CORS
                 // Configures Cross-Origin Resource Sharing so the React frontend (running on
                 // a different port/domain) can make authenticated requests to the API.
                 .cors(cors -> cors.configurationSource(request -> {
@@ -48,7 +48,7 @@ public class SecurityConfig {
                     config.setAllowedOrigins(java.util.List.of(
                             "http://localhost:5173",   // Vite dev server
                             "http://localhost:8080",   // Docker / production
-                            "https://scriptdojo.ie"   // Production domain (when live)
+                            "https://scriptdojo.ie"   // Production domain
                     ));
 
                     config.setAllowedMethods(java.util.List.of("GET","POST","PUT","DELETE","OPTIONS"));
@@ -57,12 +57,12 @@ public class SecurityConfig {
                     return config;
                 }))
 
-                // ── CSRF ──────────────────────────────────────────────────────────────────
+                // ─ CSRF
                 // CSRF protection is disabled because the React SPA manages its own session
                 // cookie and does not rely on server-rendered forms.
                 .csrf(csrf -> csrf.disable())
 
-                // ── URL AUTHORISATION RULES ───────────────────────────────────────────────
+                // ─ URL AUTHORISATION RULES
                 // Requests are evaluated top-to-bottom; the first matching rule wins.
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
@@ -97,7 +97,7 @@ public class SecurityConfig {
                         .anyRequest().authenticated()  // Everything else requires a valid session
                 )
 
-                // ── FORM LOGIN ────────────────────────────────────────────────────────────
+                // ─ FORM LOGIN
                 // Configures Spring Security's built-in form-based login mechanism.
                 // The React frontend POSTs credentials to /perform_login and reads the redirect.
                 .formLogin(form -> form
@@ -108,7 +108,7 @@ public class SecurityConfig {
                         .permitAll()
                 )
 
-                // ── LOGOUT ───────────────────────────────────────────────────────────────
+                // ─ LOGOUT
                 // Spring Security invalidates the session and redirects to /login on logout.
                 .logout(logout -> logout
                         .permitAll()
@@ -128,12 +128,10 @@ public class SecurityConfig {
     }
 
     /**
-     * Builds and exposes the AuthenticationManager bean used by the login flow.
-     *
+     * Builds and exposes the AuthenticationManager bean used by the login flow
      * Wires together:
      * - CustomUserDetailsService: fetches the User entity from the database by username
      * - BCryptPasswordEncoder: verifies the submitted password against the stored hash
-     *
      * The AuthenticationConfiguration parameter is declared to satisfy Spring's dependency
      * graph even though the manager is built manually via AuthenticationManagerBuilder.
      */

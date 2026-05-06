@@ -90,35 +90,6 @@ npm install
 npm run dev
 Runs on http://localhost:5173 with API proxied to http://localhost:8080
 
-📁 Project Structure
-scriptdojo/
-├── backend/                          # Spring Boot application
-│   ├── src/
-│   │   └── main/
-│   │       ├── java/org/scriptdojo/backend/
-│   │       │   ├── config/           # SecurityConfig, WebSocketConfig
-│   │       │   ├── controller/       # REST + WebSocket controllers
-│   │       │   ├── entity/           # JPA entities
-│   │       │   ├── repository/       # Spring Data repositories
-│   │       │   ├── security/         # CustomUserDetails, UserDetailsService
-│   │       │   └── service/          # Business logic
-│   │       └── resources/
-│   │           ├── application.properties         # Local dev config
-│   │           └── application-docker.properties  # Docker config
-│   ├── Dockerfile                    # Multi-stage build
-│   └── pom.xml
-├── frontend/
-│   └── scriptdojo-frontend/          # React + Vite application
-│       ├── src/
-│       │   ├── pages/                # 6 React pages
-│       │   ├── components/           # Shared components
-│       │   ├── api/                  # Axios API calls
-│       │   └── hooks/                # Custom React hooks
-│       ├── tests/                    # Playwright E2E tests
-│       └── vite.config.js
-├── docker-compose.yml                # Two-container orchestration
-├── .dockerignore
-└── README.md
 
 🧪 Testing
 Backend — JUnit + MockMvc (152 tests)

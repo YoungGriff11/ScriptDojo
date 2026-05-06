@@ -17,6 +17,19 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+/**
+ * Integration tests for {@link SecurityConfig}, verifying that the URL
+ * authorisation rules, form login, and logout behaviour are correctly configured.
+ * Test structure:
+ * - Public endpoints — confirm that permit-all routes are reachable without authentication
+ * - Protected endpoints — confirm that unauthenticated requests are redirected to /login
+ * - Authenticated access — confirm that valid sessions receive 200 responses
+ * - Password encoder — confirm that correct credentials produce a dashboard redirect
+ * - Logout — confirm that authenticated users are redirected to /login after logout
+ * Uses @TestInstance(PER_CLASS) so @BeforeAll can be non-static, allowing MockMvc
+ * to register the test user via HTTP before the Spring Security context initialises.
+ * @WithUserDetails relies on this user existing in H2 before any @Test runs.
+ */
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
@@ -29,8 +42,18 @@ class SecurityConfigTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    /**
+     * Username used for all authenticated test cases.
+     * Registered once in @BeforeAll and referenced by @WithUserDetails
+     * to load a valid Spring Security principal for authenticated requests.
+     */
     private static final String TEST_USERNAME = "secconfig_user";
 
+    /**
+     * Registers the test user via the public registration endpoint before any test runs.
+     * Must complete before the Spring Security context attempts to load the user via
+     * @WithUserDetails — @TestInstance(PER_CLASS) ensures this runs on the shared instance.
+     */
     @BeforeAll
     void setup() throws Exception {
         mockMvc.perform(post("/api/auth/register")
@@ -43,12 +66,13 @@ class SecurityConfigTest {
                 .andExpect(status().isOk());
     }
 
-    // ── Public endpoints ──────────────────────────────────
+    // ─ Public endpoints
 
     @Test
     @DisplayName("GET /api/auth/register endpoint is publicly accessible")
     void authRegisterEndpoint_isPublic() throws Exception {
-        // Already implicitly tested by setup, but explicitly confirm no auth needed
+        // Registers a second user without authentication to confirm the endpoint
+        // is permit-all — if it were protected this would redirect instead of returning 200
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
@@ -62,7 +86,9 @@ class SecurityConfigTest {
     @Test
     @DisplayName("GET /api/room/join/** is publicly accessible without authentication")
     void roomJoinEndpoint_isPublic() {
-        // Throws because room doesn't exist, but NOT a 302 redirect — proves the endpoint is public
+        // The request throws because the room does not exist, but the key assertion
+        // is that it does NOT return a 302 redirect to /login — proving the endpoint
+        // is reachable without authentication
         assertThrows(Exception.class, () ->
                 mockMvc.perform(get("/api/room/join/nonexistent123")));
     }
@@ -70,7 +96,8 @@ class SecurityConfigTest {
     @Test
     @DisplayName("POST /perform_login endpoint is publicly accessible")
     void performLoginEndpoint_isPublic() throws Exception {
-        // Bad credentials returns failure redirect, not a security block
+        // Wrong credentials produce a failure redirect to /login?error=true rather
+        // than a security block, confirming the endpoint itself is publicly reachable
         mockMvc.perform(post("/perform_login")
                         .param("username", "wrong")
                         .param("password", "wrong"))
@@ -78,7 +105,7 @@ class SecurityConfigTest {
                 .andExpect(redirectedUrl("/login?error=true"));
     }
 
-    // ── Protected endpoints redirect to login ─────────────
+    // ─ Protected endpoints redirect to login
 
     @Test
     @DisplayName("GET /api/files - unauthenticated request redirects to login")
@@ -120,7 +147,7 @@ class SecurityConfigTest {
                 .andExpect(status().isFound());
     }
 
-    // ── Authenticated access works ────────────────────────
+    // ─ Authenticated access works
 
     @Test
     @WithUserDetails(TEST_USERNAME)
@@ -138,11 +165,13 @@ class SecurityConfigTest {
                 .andExpect(status().isOk());
     }
 
-    // ── Password encoder ──────────────────────────────────
+    // ─ Password encoder
 
     @Test
     @DisplayName("POST /perform_login - correct credentials redirect to dashboard")
     void performLogin_correctCredentials_redirectsToDashboard() throws Exception {
+        // Verifies that the BCryptPasswordEncoder is correctly wired into the
+        // authentication manager — a misconfigured encoder would cause this to fail
         mockMvc.perform(post("/perform_login")
                         .param("username", TEST_USERNAME)
                         .param("password", "Password1!"))
@@ -150,7 +179,7 @@ class SecurityConfigTest {
                 .andExpect(redirectedUrl("/dashboard"));
     }
 
-    // ── Logout ────────────────────────────────────────────
+    // ─ Logout
 
     @Test
     @WithUserDetails(TEST_USERNAME)

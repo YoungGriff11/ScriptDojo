@@ -11,7 +11,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -19,21 +18,16 @@ import java.util.stream.Collectors;
 
 /**
  * REST controller for managing guest edit permissions in ScriptDojo.
- *
  * Hosts (authenticated file owners) use these endpoints to grant or revoke
  * edit access for guests who have joined their room. Guests are identified
  * by their display name rather than a user account, since they are unauthenticated.
- *
  * Every permission change is immediately broadcast over WebSocket to the room's
  * permissions channel (/topic/room/{fileId}/permissions) so all connected
  * participants can update their UI state (e.g. enabling/disabling the editor)
  * in real time without polling.
- *
  * All mutating endpoints enforce that only the file owner can grant or revoke
  * permissions, returning 403 Forbidden otherwise.
- *
  * Base path: /api/permissions
- *
  * Note: revokeEditPermission currently uses a placeholder user ID and should
  * be updated to resolve the authenticated user consistently with grantEditPermission.
  */
@@ -57,14 +51,11 @@ public class PermissionController {
 
     /**
      * Grants edit permission to a named guest in a collaborative room.
-     *
      * Only the authenticated owner of the file may call this endpoint.
      * On success, the permission is persisted and a WebSocket broadcast is sent
      * to /topic/room/{fileId}/permissions so the guest's editor is unlocked
      * immediately without requiring a page refresh.
-     *
      * POST /api/permissions/grant-edit
-     *
      * @param fileId    the ID of the file/room the guest is joining
      * @param guestName the display name of the guest to grant edit access to
      * @param auth      the authentication of the requesting user; must be the file owner
@@ -117,18 +108,14 @@ public class PermissionController {
 
     /**
      * Revokes edit permission from a named guest in a collaborative room.
-     *
      * Only the file owner should be able to call this endpoint. The permission
      * record is removed from the database and a WebSocket broadcast is sent to
      * /topic/room/{fileId}/permissions so the guest's editor is locked immediately.
-     *
      * POST /api/permissions/revoke-edit
-     *
      * NOTE: The owner ID is currently hardcoded to a placeholder value (1000L).
      * This means the ownership check will always fail in practice and the endpoint
      * will always return 403. This should be updated to resolve the authenticated
      * user ID from the Authentication principal, consistent with grantEditPermission.
-     *
      * @param fileId    the ID of the file/room
      * @param guestName the display name of the guest whose edit access should be removed
      * @param auth      the authentication of the requesting user; must be the file owner
@@ -145,7 +132,6 @@ public class PermissionController {
         log.info("   File ID: {}", fileId);
         log.info("   Guest: {}", guestName);
 
-        // TODO: replace with authenticated user ID, same as grantEditPermission.
         // The placeholder value (1000L) will cause isOwner() to return false for
         // all real users, making this endpoint always return 403.
         Long currentUserId = 1000L; // Placeholder
@@ -173,12 +159,9 @@ public class PermissionController {
 
     /**
      * Returns all permission records associated with a given file.
-     *
      * Used by the host's UI to display the current permission state of all
      * guests who have been granted or had access revoked in the room.
-     *
      * GET /api/permissions/file/{fileId}
-     *
      * @param fileId the ID of the file whose permissions should be listed
      * @param auth   the authentication of the requesting user (present but not
      *               currently used for ownership enforcement on this read endpoint)
@@ -204,13 +187,10 @@ public class PermissionController {
 
     /**
      * Returns the set of users currently connected to a room.
-     *
      * Provides an HTTP alternative to the WebSocket active-user broadcasts
      * emitted by WebSocketEventListener. Useful for the host to query the
      * current presence state on initial page load before WebSocket events arrive.
-     *
      * GET /api/permissions/file/{fileId}/active-users
-     *
      * @param fileId the ID of the file/room to query
      * @return 200 OK with a JSON object containing the fileId, the set of
      *         usernames, and a convenience count field
@@ -228,11 +208,9 @@ public class PermissionController {
 
     /**
      * Converts a {@link PermissionEntity} to a {@link PermissionDTO} for API responses.
-     *
      * Keeps the internal entity structure decoupled from the API contract —
      * callers receive only the fields relevant to the frontend, with enum values
      * serialised as strings via {@code role.name()}.
-     *
      * @param entity the permission entity to convert
      * @return a DTO representation safe for serialisation in API responses
      */

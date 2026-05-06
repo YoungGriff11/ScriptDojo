@@ -11,19 +11,31 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Service responsible for managing guest and authenticated user permissions
+ * within collaborative editing rooms in ScriptDojo.
+ * Provides permission checking, granting, revoking, and cleanup operations
+ * used by {@link org.scriptdojo.backend.controller.PermissionController} and
+ * {@link FileService}.
+ * Guest permissions are keyed by display name; authenticated user permissions
+ * are keyed by database user ID. Grant operations are upserts — if a permission
+ * record already exists for the participant it is upgraded rather than duplicated.
+ */
 @Service
-@RequiredArgsConstructor
+@RequiredArgsConstructor // Lombok: generates constructor injecting permissionRepository
 @Slf4j
 public class PermissionService {
 
     private final PermissionRepository permissionRepository;
 
-    // ============================================
-    // PERMISSION CHECKING (GUEST)
-    // ============================================
+    // ─ Guest permission checks
 
     /**
-     * Check if a guest can edit a file
+     * Returns true if the given guest has EDIT-level access to the given file.
+     * Returns false if no permission record exists or if the record is VIEW-only.
+     * @param guestName the display name of the guest to check
+     * @param fileId    the ID of the file to check against
+     * @return true if the guest has edit permission, false otherwise
      */
     public boolean canGuestEdit(String guestName, Long fileId) {
         log.debug("🔍 Checking guest edit permission: guest='{}', file={}", guestName, fileId);
@@ -39,18 +51,25 @@ public class PermissionService {
     }
 
     /**
-     * Check if a guest has any access (view or edit)
+     * Returns true if the given guest has any permission record for the file
+     * (VIEW or EDIT). Used to determine whether a guest has been explicitly
+     * granted access, regardless of level.
+     * @param guestName the display name of the guest to check
+     * @param fileId    the ID of the file to check against
+     * @return true if a permission record exists for this guest and file
      */
     public boolean hasGuestAccess(String guestName, Long fileId) {
         return permissionRepository.existsByFileIdAndGuestName(fileId, guestName);
     }
 
-    // ============================================
-    // PERMISSION CHECKING (AUTHENTICATED USER)
-    // ============================================
+    // ─ Authenticated user permission checks
 
     /**
-     * Check if authenticated user can edit a file
+     * Returns true if the given authenticated user has EDIT-level access to the file.
+     * Returns false if no permission record exists or if the record is VIEW-only.
+     * @param userId the database ID of the user to check
+     * @param fileId the ID of the file to check against
+     * @return true if the user has edit permission, false otherwise
      */
     public boolean canUserEdit(Long userId, Long fileId) {
         log.debug("🔍 Checking user edit permission: userId={}, file={}", userId, fileId);
@@ -66,18 +85,27 @@ public class PermissionService {
     }
 
     /**
-     * Check if user has any access
+     * Returns true if the given authenticated user has any permission record
+     * for the file (VIEW or EDIT).
+     * @param userId the database ID of the user to check
+     * @param fileId the ID of the file to check against
+     * @return true if a permission record exists for this user and file
      */
     public boolean hasUserAccess(Long userId, Long fileId) {
         return permissionRepository.existsByFileIdAndUserId(fileId, userId);
     }
 
-    // ============================================
-    // GRANT PERMISSIONS (GUEST)
-    // ============================================
+    // ─ Guest permission grants
 
     /**
-     * Grant edit permission to a guest
+     * Grants EDIT-level permission to a guest for the given file.
+     * If a permission record already exists for the guest it is upgraded to EDIT
+     * via {@link PermissionEntity#grantEdit()}; otherwise a new record is created.
+     * The grantedBy field is updated in both cases to reflect the current host.
+     * @param guestName the display name of the guest to grant edit access to
+     * @param fileId    the ID of the file the guest is being granted access to
+     * @param grantedBy the user ID of the host granting the permission
+     * @return the persisted {@link PermissionEntity} with EDIT role
      */
     @Transactional
     public PermissionEntity grantGuestEdit(String guestName, Long fileId, Long grantedBy) {
@@ -87,20 +115,19 @@ public class PermissionService {
         log.info("   File ID: {}", fileId);
         log.info("   Granted By: {}", grantedBy);
 
-        // Check if permission already exists
         Optional<PermissionEntity> existing = permissionRepository
                 .findByFileIdAndGuestName(fileId, guestName);
 
         PermissionEntity permission;
 
         if (existing.isPresent()) {
-            // Upgrade existing permission
+            // Upgrade the existing record rather than creating a duplicate
             permission = existing.get();
             permission.grantEdit();
             permission.setGrantedBy(grantedBy);
             log.info("   ✅ Upgraded existing permission to EDIT");
         } else {
-            // Create new permission
+            // No existing record — create a fresh EDIT permission for the guest
             permission = PermissionEntity.builder()
                     .fileId(fileId)
                     .guestName(guestName)
@@ -120,7 +147,13 @@ public class PermissionService {
     }
 
     /**
-     * Grant view-only permission to a guest
+     * Grants VIEW-only permission to a guest for the given file.
+     * Always creates a new permission record — does not check for an existing one.
+     * Intended for use when initially registering a guest's presence in a room.
+     * @param guestName the display name of the guest to grant view access to
+     * @param fileId    the ID of the file the guest is being granted access to
+     * @param grantedBy the user ID of the host granting the permission
+     * @return the persisted {@link PermissionEntity} with VIEW role
      */
     @Transactional
     public PermissionEntity grantGuestView(String guestName, Long fileId, Long grantedBy) {
@@ -137,12 +170,16 @@ public class PermissionService {
         return permissionRepository.save(permission);
     }
 
-    // ============================================
-    // GRANT PERMISSIONS (AUTHENTICATED USER)
-    // ============================================
+    // ─ Authenticated user permission grants
 
     /**
-     * Grant edit permission to authenticated user
+     * Grants EDIT-level permission to an authenticated user for the given file.
+     * If a permission record already exists for the user it is upgraded to EDIT;
+     * otherwise a new record is created.
+     * @param userId    the database ID of the user to grant edit access to
+     * @param fileId    the ID of the file the user is being granted access to
+     * @param grantedBy the user ID of the host granting the permission
+     * @return the persisted {@link PermissionEntity} with EDIT role
      */
     @Transactional
     public PermissionEntity grantUserEdit(Long userId, Long fileId, Long grantedBy) {
@@ -154,6 +191,7 @@ public class PermissionService {
         PermissionEntity permission;
 
         if (existing.isPresent()) {
+            // Upgrade the existing record rather than creating a duplicate
             permission = existing.get();
             permission.grantEdit();
             permission.setGrantedBy(grantedBy);
@@ -170,12 +208,15 @@ public class PermissionService {
         return permissionRepository.save(permission);
     }
 
-    // ============================================
-    // REVOKE PERMISSIONS
-    // ============================================
+    // ─ Permission revocation
 
     /**
-     * Revoke edit permission from guest (downgrade to view)
+     * Downgrades a guest's permission from EDIT to VIEW for the given file.
+     * The permission record is retained — only the role is downgraded via
+     * {@link PermissionEntity#revokeEdit()}. Logs a warning if no permission
+     * record exists for the guest.
+     * @param guestName the display name of the guest whose edit access should be revoked
+     * @param fileId    the ID of the file to revoke access on
      */
     @Transactional
     public void revokeGuestEdit(String guestName, Long fileId) {
@@ -195,7 +236,11 @@ public class PermissionService {
     }
 
     /**
-     * Remove all access from guest
+     * Removes all access for a guest by deleting their permission record entirely.
+     * More destructive than {@link #revokeGuestEdit} — the guest will have no
+     * permission record and will need to be re-granted access to rejoin.
+     * @param guestName the display name of the guest whose access should be removed
+     * @param fileId    the ID of the file to remove access from
      */
     @Transactional
     public void removeGuestAccess(String guestName, Long fileId) {
@@ -204,26 +249,34 @@ public class PermissionService {
         log.info("   ✅ Access removed");
     }
 
-    // ============================================
-    // FILE QUERIES
-    // ============================================
+    // ─ File-level queries
 
     /**
-     * Get all permissions for a file
+     * Returns all permission records for the given file, covering both guests
+     * and authenticated users.
+     * Used by {@link org.scriptdojo.backend.controller.PermissionController}
+     * to populate the host's permission management panel.
+     * @param fileId the ID of the file to query
+     * @return a list of all {@link PermissionEntity} records for the file
      */
     public List<PermissionEntity> getFilePermissions(Long fileId) {
         return permissionRepository.findByFileId(fileId);
     }
 
     /**
-     * Get all users/guests with edit permission
+     * Returns all permission records for the given file that have EDIT-level access.
+     * @param fileId the ID of the file to query
+     * @return a list of {@link PermissionEntity} records with EDIT role
      */
     public List<PermissionEntity> getEditUsers(Long fileId) {
         return permissionRepository.findByFileIdAndRole(fileId, PermissionRole.EDIT);
     }
 
     /**
-     * Cleanup all permissions when file is deleted
+     * Deletes all permission records associated with the given file.
+     * Called by {@link FileService#deleteFile} before the file entity is removed
+     * to ensure no orphaned permission records remain in the database.
+     * @param fileId the ID of the file whose permissions should be deleted
      */
     @Transactional
     public void deleteFilePermissions(Long fileId) {

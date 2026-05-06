@@ -12,12 +12,10 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * REST controller that exposes profile information for the currently
  * authenticated user.
- *
  * Used by the React frontend on initial load to identify the logged-in user
  * (display name, email) without requiring the full user entity to be exposed.
  * The response is intentionally scoped to non-sensitive fields via
  * {@link UserInfoDTO} — password hash and role are never included.
- *
  * Base path: /api/user
  */
 @RestController
@@ -30,17 +28,13 @@ public class UserController {
 
     /**
      * Returns profile information for the currently authenticated user.
-     *
      * Delegates to {@link UserService#getCurrentUser()}, which resolves the
      * authenticated username from the Spring Security context and loads the
      * corresponding {@link UserEntity} from the database.
-     *
      * The response is mapped to a {@link UserInfoDTO} containing only the
      * fields the frontend needs (ID, username, email). Sensitive fields such
      * as the password hash and role are deliberately excluded.
-     *
      * GET /api/user/me
-     *
      * @return 200 OK with the authenticated user's ID, username, and email
      */
     @GetMapping("/me")

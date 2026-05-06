@@ -12,7 +12,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
-
 import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.Map;
@@ -20,12 +19,10 @@ import java.util.Random;
 
 /**
  * Controller for creating and joining collaborative editing rooms in ScriptDojo.
- *
  * A room is a lightweight join record that associates a shareable ID with a
  * file and its host. Guests navigate to the share URL, which the React frontend
  * resolves by calling the join endpoint to retrieve the file content and an
  * assigned guest name — no account or login is required.
- *
  * Room lifecycle:
  *   1. Host calls POST /api/room/create → a RoomEntity is persisted and a
  *      shareable URL is returned containing the generated room ID.
@@ -33,11 +30,9 @@ import java.util.Random;
  *   3. Guest navigates to /room/{roomId} in their browser → the React frontend
  *      calls GET /api/room/join/{roomId} to fetch the file content and guest name,
  *      then connects to the WebSocket to begin the collaborative session.
- *
  * The share URL base is configurable via the {@code app.base-url} property so
  * that the same codebase works correctly in local development, Docker, and
  * production environments without code changes.
- *
  * Note: Uses @Controller rather than @RestController because SpaController
  * (which serves index.html for React routes) is also registered in this package.
  * Each endpoint that returns a response body is annotated with @ResponseBody explicitly.
@@ -65,13 +60,10 @@ public class RoomController {
 
     /**
      * Creates a new collaboration room for a given file and returns a shareable URL.
-     *
      * Generates a unique 11-character alphanumeric room ID, persists a RoomEntity
      * linking it to the file and the authenticated host, then constructs and returns
      * the URL that guests can use to join the session.
-     *
      * POST /api/room/create?fileId={fileId}
-     *
      * @param fileId the ID of the file to share; the room is associated with this file
      * @param auth   the authentication of the host creating the room; used to record
      *               the host ID on the room entity
@@ -122,18 +114,14 @@ public class RoomController {
 
     /**
      * Returns the file data and an assigned guest name for a guest joining a room.
-     *
      * Called by the React frontend when a guest navigates to /room/{roomId}.
      * Looks up the room record, loads the associated file, encodes its content
      * in Base64 (to safely transport arbitrary source code as JSON), and generates
      * a random display name for the guest.
-     *
      * This endpoint is intentionally public (no authentication required) so that
      * guests can join without creating an account — see SecurityConfig for the
      * /api/room/join/** permit-all rule.
-     *
      * GET /api/room/join/{roomId}
-     *
      * @param roomId the room ID extracted from the share URL
      * @return 200 OK with a JSON object containing:
      *         - "fileId":    the ID of the shared file (used for WebSocket routing)
@@ -180,12 +168,10 @@ public class RoomController {
 
     /**
      * Generates a random 11-character alphanumeric room ID.
-     *
      * Uses lowercase letters and digits only (no ambiguous characters such as
      * 0/O or 1/l) to produce a URL-safe identifier. With a 36-character alphabet
      * and 11 positions the collision probability is negligible for the expected
      * number of concurrent rooms in an educational deployment.
-     *
      * @return an 11-character alphanumeric room ID string
      */
     private String generateRoomId() {
@@ -200,12 +186,10 @@ public class RoomController {
 
     /**
      * Generates a random guest display name in the format "Guest{0-9999}".
-     *
      * The numeric suffix provides enough variation to make collisions unlikely
      * in small educational sessions. The generated name is used for the session
      * lifetime only and is not persisted — guests receive a new name each time
      * they join via the room URL.
-     *
      * @return a randomly generated guest display name
      */
     private String generateGuestName() {

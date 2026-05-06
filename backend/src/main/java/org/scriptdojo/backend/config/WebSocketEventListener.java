@@ -16,13 +16,11 @@ import java.util.Map;
 /**
  * Listens for WebSocket lifecycle events (connect, subscribe, disconnect) and
  * maintains the active users list for each collaborative editing session.
- *
  * Responsibilities:
  * - Tracks which file (room) each WebSocket session is currently viewing
  * - Resolves the display name for both authenticated hosts and unauthenticated guests
  * - Adds/removes users from ActiveUsersService as they join or leave
  * - Broadcasts the updated user list to all room subscribers after every change
- *
  * Username resolution priority (handled in handleSubscribeEvent):
  *   1. Session attributes  — set by WebSocketConfig interceptor for guests
  *   2. Spring Security Principal — available for authenticated hosts
@@ -70,15 +68,12 @@ public class WebSocketEventListener {
 
     /**
      * Used when a client sends a STOMP SUBSCRIBE frame.
-     *
      * This is the primary entry point for room presence tracking. When a client
      * subscribes to a /topic/room/{fileId} destination, they are considered to have
      * joined that room and are added to the active users list.
-     *
      * Username resolution follows a three-step priority chain to handle both
      * authenticated hosts (who have a Spring Security Principal) and unauthenticated
      * guests (whose name was stored in session attributes by the STOMP CONNECT interceptor).
-     *
      * Destinations that do not match /topic/room/{fileId} (e.g. cursor channels) are
      * parsed but only the numeric fileId segment triggers presence tracking — non-numeric
      * segments (e.g. "cursors") are silently skipped via the NumberFormatException catch.
@@ -89,7 +84,7 @@ public class WebSocketEventListener {
         String sessionId = headerAccessor.getSessionId();
         String destination = headerAccessor.getDestination();
 
-        // ── Username resolution ───────────────────────────────────────────────────
+        // ─ Username resolution
         // Guests have no Spring Security Principal; their name was captured from the
         // STOMP CONNECT frame and stored in session attributes by WebSocketConfig.
         // Hosts are authenticated and their name comes from the Principal instead.
@@ -111,7 +106,7 @@ public class WebSocketEventListener {
 
         log.info("📻 SUBSCRIPTION: {} subscribed to {}", username, destination);
 
-        // ── Room presence tracking ────────────────────────────────────────────────
+        // ─ Room presence tracking
         // Only subscriptions to /topic/room/{fileId} trigger presence updates.
         // Companion channels like /topic/room/{fileId}/cursors share the same
         // fileId segment but are not treated as separate join events.
@@ -143,7 +138,6 @@ public class WebSocketEventListener {
 
     /**
      * Fired when a WebSocket session is closed (client disconnected or network dropped).
-     *
      * Cleans up both session tracking maps and removes the user from the active users
      * store, then broadcasts the updated list so all remaining room participants see
      * the departure immediately without needing to poll.
@@ -178,12 +172,9 @@ public class WebSocketEventListener {
     /**
      * Publishes the current active user list for a given file to all subscribers
      * of the /topic/room/{fileId}/users destination.
-     *
      * The payload includes the fileId, the list of usernames, and a convenience
      * count field so the frontend does not need to compute the size itself.
-     *
      * Called after every join and leave event to keep all clients in sync.
-     *
      * @param fileId the ID of the file/room whose user list should be broadcast
      */
     private void broadcastActiveUsers(Long fileId) {

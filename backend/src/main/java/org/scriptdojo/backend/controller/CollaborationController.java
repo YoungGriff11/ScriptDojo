@@ -21,20 +21,16 @@ import java.util.Collections;
 
 /**
  * STOMP message controller for real-time collaborative editing in ScriptDojo.
- *
  * Handles two categories of inbound WebSocket messages:
- *
  * 1. Text edits (/app/room/{fileId}/edit)
  *    - Resolves the editor's username (host Principal or guest body field)
  *    - Persists the latest content to the database
  *    - Runs the ANTLR parser and broadcasts any syntax errors to the error channel
  *    - Broadcasts the change to all room subscribers so their editors stay in sync
- *
  * 2. Cursor moves (/app/room/{fileId}/cursor)
  *    - Broadcasts the cursor position to all room subscribers so each participant
  *      can see where others are editing in real time
  *    - Stateless: no persistence or parsing; the payload is forwarded as-is
- *
  *  3. Username resolution (edits only):
  *   Authenticated hosts  → Spring Security Principal (injected by the framework)
  *   Unauthenticated guests → username field in the TextChange message body
@@ -57,21 +53,17 @@ public class CollaborationController {
 
     /**
      * Handles real-time text edits sent by any participant in a collaborative room.
-     *
      * Inbound:  /app/room/{fileId}/edit       (TextChange payload)
      * Outbound: /topic/room/{fileId}           (TextChange broadcast to all subscribers)
      *           /topic/room/{fileId}/errors    (ParserErrorBroadcast, sent manually)
-     *
      * Processing steps:
      *   1. Resolve the editor's display name
      *   2. Persist the updated content to the database
      *   3. Parse the content with ANTLR and broadcast syntax errors (or an empty
      *      error list if the content is blank, to clear existing markers in the editor)
      *   4. Return the TextChange so @SendTo broadcasts it to all room subscribers
-     *
      * Parser errors are non-critical — a parse failure is caught and logged but does
      * not prevent the edit from being saved or broadcast.
-     *
      * @param fileId    the ID of the file being edited, extracted from the destination path
      * @param change    the incoming edit payload containing the full current content
      *                  and optionally the sender's username (required for guests)
@@ -185,14 +177,11 @@ public class CollaborationController {
 
     /**
      * Handles real-time cursor position updates sent by any participant.
-     *
      * Inbound:  /app/room/{fileId}/cursor      (CursorMove payload)
      * Outbound: /topic/room/{fileId}/cursors   (CursorMove broadcast to all subscribers)
-     *
      * Stateless and lightweight: the payload is validated by the framework and
      * returned as-is for broadcasting. No persistence or parsing is performed.
      * The session ID is logged at DEBUG level for traceability during development.
-     *
      * @param fileId         the ID of the file, extracted from the destination path
      * @param move           the cursor position payload containing username, line, and column
      * @param headerAccessor provides access to STOMP session metadata (session ID for logging)

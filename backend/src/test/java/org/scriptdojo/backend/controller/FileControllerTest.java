@@ -21,6 +21,22 @@ import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+/**
+ * Integration tests for {@link org.scriptdojo.backend.controller.FileController},
+ * covering all CRUD endpoints under /api/files.
+ * Test structure:
+ * - GET /api/files          — list retrieval, authentication enforcement
+ * - GET /api/files/{id}     — single file retrieval, field presence, missing ID handling
+ * - POST /api/files         — file creation, content and ownerId validation
+ * - PUT /api/files/{id}     — metadata update
+ * - PUT /api/files/{id}/content  — content-only update and persistence verification
+ * - PUT /api/files/{id}/rename   — rename with content preservation
+ * - DELETE /api/files/{id}  — deletion, post-delete fetch, list removal
+ * Uses @TestInstance(PER_CLASS) so @BeforeAll can be non-static, allowing MockMvc
+ * to register the test user via HTTP before @WithUserDetails attempts to load them.
+ * File names include System.currentTimeMillis() to ensure uniqueness across test runs
+ * and prevent cross-test state conflicts in the shared H2 database.
+ */
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
@@ -33,12 +49,20 @@ class FileControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    /**
+     * Username used for all authenticated test cases.
+     * Registered once in @BeforeAll and referenced by @WithUserDetails
+     * to load a valid CustomUserDetails with a real database ID.
+     */
     private static final String TEST_USERNAME = "filetest_user";
 
-    // ── Setup ─────────────────────────────────────────────
+    // ─ Setup
 
-    // Creates the test user in H2 once before any tests run
-    // so @WithUserDetails can load a real CustomUserDetails with a valid ID
+    /**
+     * Registers the test user via the public registration endpoint before any test runs.
+     * Required so @WithUserDetails can resolve a real CustomUserDetails instance with a
+     * valid database ID — without this, file ownership assertions would fail.
+     */
     @BeforeAll
     void setupTestUser() throws Exception {
         mockMvc.perform(post("/api/auth/register")
@@ -51,7 +75,13 @@ class FileControllerTest {
                 .andExpect(status().isOk());
     }
 
-    // ── Helper: create a file and return its ID ───────────
+    /**
+     * Creates a file via POST /api/files and returns its generated ID.
+     * Used by tests that need an existing file before exercising read, update,
+     * or delete behaviour — avoids repeating file creation boilerplate inline.
+     * @param name the file name to use; should be unique per call to avoid conflicts
+     * @return the database ID of the newly created file
+     */
     private Long createTestFile(String name) throws Exception {
         String body = objectMapper.writeValueAsString(Map.of(
                 "name", name,
@@ -69,34 +99,31 @@ class FileControllerTest {
                 .get("id").asLong();
     }
 
-    // ── GET /api/files ────────────────────────────────────
+    // ─ GET /api/files
 
-    // Tests that an authenticated user can retrieve their file list
-    // by calling GET /api/files and expecting an array response
     @Test
     @WithUserDetails(TEST_USERNAME)
     @DisplayName("GET /api/files - returns list of files for authenticated user")
     void getUserFiles_authenticated_returnsFileList() throws Exception {
+        // Confirms the endpoint returns a JSON array for an authenticated user
         mockMvc.perform(get("/api/files"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray());
     }
 
-    // Tests that an unauthenticated request to GET /api/files is rejected
-    // by calling the endpoint without a session and expecting a redirect to login
     @Test
     @DisplayName("GET /api/files - redirects to login when not authenticated")
     void getUserFiles_unauthenticated_redirectsToLogin() throws Exception {
+        // No session present — Spring Security should redirect rather than return data
         mockMvc.perform(get("/api/files"))
                 .andExpect(status().isFound());
     }
 
-    // Tests that a newly created file appears in the user's file list
-    // by creating a file and then checking it appears in GET /api/files
     @Test
     @WithUserDetails(TEST_USERNAME)
     @DisplayName("GET /api/files - newly created file appears in list")
     void getUserFiles_afterCreation_containsNewFile() throws Exception {
+        // Verifies that the file list reflects newly persisted files immediately
         String uniqueName = "ListTest" + System.currentTimeMillis() + ".java";
         createTestFile(uniqueName);
 
@@ -105,14 +132,13 @@ class FileControllerTest {
                 .andExpect(jsonPath("$[*].name", hasItem(uniqueName)));
     }
 
-    // ── GET /api/files/{id} ───────────────────────────────
+    // ─ GET /api/files/{id}
 
-    // Tests that a specific file can be retrieved by its ID
-    // by creating a file then fetching it by ID and checking the name matches
     @Test
     @WithUserDetails(TEST_USERNAME)
     @DisplayName("GET /api/files/{id} - returns correct file by ID")
     void getFile_validId_returnsFile() throws Exception {
+        // Confirms the correct file is returned when fetched by its database ID
         String name = "GetTest" + System.currentTimeMillis() + ".java";
         Long id = createTestFile(name);
 
@@ -122,12 +148,12 @@ class FileControllerTest {
                 .andExpect(jsonPath("$.name").value(name));
     }
 
-    // Tests that the file response includes all expected fields
-    // by creating a file and checking id, name, content, language are all present
     @Test
     @WithUserDetails(TEST_USERNAME)
     @DisplayName("GET /api/files/{id} - response includes all DTO fields")
     void getFile_validId_responseHasAllFields() throws Exception {
+        // Verifies that all expected FileDTO fields are present in the response,
+        // ensuring the entity-to-DTO mapping is complete
         Long id = createTestFile("FieldTest" + System.currentTimeMillis() + ".java");
 
         mockMvc.perform(get("/api/files/" + id))
@@ -139,24 +165,23 @@ class FileControllerTest {
                 .andExpect(jsonPath("$.ownerId").exists());
     }
 
-    // Tests that requesting a non-existent file ID returns a 500
-    // by fetching an ID that does not exist in the database
     @Test
     @WithUserDetails(TEST_USERNAME)
     @DisplayName("GET /api/files/{id} - returns 500 for non-existent file")
     void getFile_invalidId_returns500() {
+        // RuntimeException propagates as ServletException when no @ControllerAdvice
+        // is present — assertThrows captures it rather than failing the test
         assertThrows(Exception.class, () ->
                 mockMvc.perform(get("/api/files/999999")));
     }
 
-    // ── POST /api/files ───────────────────────────────────
+    // ─ POST /api/files
 
-    // Tests that a new file is created successfully with valid data
-    // by posting a file DTO and expecting a 200 response with the created file
     @Test
     @WithUserDetails(TEST_USERNAME)
     @DisplayName("POST /api/files - creates file successfully with valid data")
     void createFile_validData_returns200() throws Exception {
+        // Confirms a well-formed creation request returns 200 with the persisted file
         String name = "CreateTest" + System.currentTimeMillis() + ".java";
         String body = objectMapper.writeValueAsString(Map.of(
                 "name", name,
@@ -172,12 +197,11 @@ class FileControllerTest {
                 .andExpect(jsonPath("$.id").isNumber());
     }
 
-    // Tests that the created file response contains the correct content
-    // by checking the content field in the response matches what was sent
     @Test
     @WithUserDetails(TEST_USERNAME)
     @DisplayName("POST /api/files - response contains correct content")
     void createFile_validData_responseHasCorrectContent() throws Exception {
+        // Verifies the content field in the response matches what was submitted
         String content = "public class ContentCheck { }";
         String body = objectMapper.writeValueAsString(Map.of(
                 "name", "ContentCheck" + System.currentTimeMillis() + ".java",
@@ -192,12 +216,12 @@ class FileControllerTest {
                 .andExpect(jsonPath("$.content").value(content));
     }
 
-    // Tests that the ownerId in the created file matches the authenticated user
-    // by creating a file and checking the ownerId field is populated
     @Test
     @WithUserDetails(TEST_USERNAME)
     @DisplayName("POST /api/files - response includes correct ownerId")
     void createFile_validData_responseHasOwnerId() throws Exception {
+        // Confirms the ownerId is populated in the response, verifying the authenticated
+        // user's ID was correctly associated with the new file
         String body = objectMapper.writeValueAsString(Map.of(
                 "name", "OwnerTest" + System.currentTimeMillis() + ".java",
                 "content", "public class OwnerTest {}",
@@ -211,14 +235,13 @@ class FileControllerTest {
                 .andExpect(jsonPath("$.ownerId").isNumber());
     }
 
-    // ── PUT /api/files/{id} ───────────────────────────────
+    // ─ PUT /api/files/{id}
 
-    // Tests that a file's metadata can be updated with a PUT request
-    // by creating a file and then updating its name via PUT /api/files/{id}
     @Test
     @WithUserDetails(TEST_USERNAME)
     @DisplayName("PUT /api/files/{id} - updates file metadata successfully")
     void updateFile_validData_returns200() throws Exception {
+        // Confirms the name field is updated and reflected in the response
         Long id = createTestFile("UpdateMeta" + System.currentTimeMillis() + ".java");
         String newName = "UpdatedName" + System.currentTimeMillis() + ".java";
 
@@ -234,14 +257,13 @@ class FileControllerTest {
                 .andExpect(jsonPath("$.name").value(newName));
     }
 
-    // ── PUT /api/files/{id}/content ───────────────────────
+    // ─ PUT /api/files/{id}/content
 
-    // Tests that file content can be updated independently of metadata
-    // by creating a file then calling PUT /api/files/{id}/content with new content
     @Test
     @WithUserDetails(TEST_USERNAME)
     @DisplayName("PUT /api/files/{id}/content - updates file content successfully")
     void updateContent_validData_returns200() throws Exception {
+        // Confirms the content field is replaced and returned in the response
         Long id = createTestFile("ContentUpdate" + System.currentTimeMillis() + ".java");
         String newContent = "public class Updated { // new content }";
 
@@ -252,12 +274,12 @@ class FileControllerTest {
                 .andExpect(jsonPath("$.content").value(newContent));
     }
 
-    // Tests that content update persists correctly by fetching the file after update
-    // by updating content and then re-fetching the file to verify the change was saved
     @Test
     @WithUserDetails(TEST_USERNAME)
     @DisplayName("PUT /api/files/{id}/content - content change persists on re-fetch")
     void updateContent_persistsAfterFetch() throws Exception {
+        // Verifies the updated content is durably persisted by re-fetching the file
+        // in a separate request after the update
         Long id = createTestFile("PersistTest" + System.currentTimeMillis() + ".java");
         String newContent = "public class Persisted { }";
 
@@ -271,14 +293,13 @@ class FileControllerTest {
                 .andExpect(jsonPath("$.content").value(newContent));
     }
 
-    // ── PUT /api/files/{id}/rename ────────────────────────
+    // ─ PUT /api/files/{id}/rename
 
-    // Tests that a file can be renamed via the rename endpoint
-    // by creating a file and then calling PUT /api/files/{id}/rename with a new name
     @Test
     @WithUserDetails(TEST_USERNAME)
     @DisplayName("PUT /api/files/{id}/rename - renames file successfully")
     void renameFile_validName_returns200() throws Exception {
+        // Confirms the name field is updated and reflected in the response
         Long id = createTestFile("OldName" + System.currentTimeMillis() + ".java");
         String newName = "NewName" + System.currentTimeMillis() + ".java";
 
@@ -288,12 +309,12 @@ class FileControllerTest {
                 .andExpect(jsonPath("$.name").value(newName));
     }
 
-    // Tests that the renamed file retains its original content after renaming
-    // by checking the content field is unchanged after a rename operation
     @Test
     @WithUserDetails(TEST_USERNAME)
     @DisplayName("PUT /api/files/{id}/rename - content is preserved after rename")
     void renameFile_contentPreservedAfterRename() throws Exception {
+        // Verifies that renaming only modifies the name field and leaves the
+        // file's content unchanged
         String originalContent = "public class OriginalContent { }";
         String body = objectMapper.writeValueAsString(Map.of(
                 "name", "PreserveContent" + System.currentTimeMillis() + ".java",
@@ -315,26 +336,25 @@ class FileControllerTest {
                 .andExpect(jsonPath("$.content").value(originalContent));
     }
 
-    // ── DELETE /api/files/{id} ────────────────────────────
+    // ─ DELETE /api/files/{id}
 
-    // Tests that a file can be deleted and returns 204 No Content
-    // by creating a file and then deleting it with DELETE /api/files/{id}
     @Test
     @WithUserDetails(TEST_USERNAME)
     @DisplayName("DELETE /api/files/{id} - deletes file and returns 204")
     void deleteFile_validId_returns204() throws Exception {
+        // Confirms a valid DELETE request returns the expected 204 No Content status
         Long id = createTestFile("DeleteMe" + System.currentTimeMillis() + ".java");
 
         mockMvc.perform(delete("/api/files/" + id))
                 .andExpect(status().isNoContent());
     }
 
-    // Tests that a deleted file can no longer be retrieved
-    // by deleting a file then verifying GET /api/files/{id} returns 500
     @Test
     @WithUserDetails(TEST_USERNAME)
     @DisplayName("DELETE /api/files/{id} - deleted file cannot be fetched")
     void deleteFile_deletedFileNotFound() throws Exception {
+        // Verifies the file is no longer retrievable after deletion —
+        // the RuntimeException propagates as assertThrows captures it
         Long id = createTestFile("GoneFile" + System.currentTimeMillis() + ".java");
 
         mockMvc.perform(delete("/api/files/" + id))
@@ -344,12 +364,12 @@ class FileControllerTest {
                 mockMvc.perform(get("/api/files/" + id)));
     }
 
-    // Tests that deleting a file removes it from the user's file list
-    // by creating a file, deleting it, and checking it no longer appears in GET /api/files
     @Test
     @WithUserDetails(TEST_USERNAME)
     @DisplayName("DELETE /api/files/{id} - file no longer appears in file list")
     void deleteFile_removedFromFileList() throws Exception {
+        // Confirms deletion is reflected in the file list — verifies both that
+        // the file was present before deletion and absent after
         String name = "RemoveFromList" + System.currentTimeMillis() + ".java";
         Long id = createTestFile(name);
 
@@ -363,12 +383,12 @@ class FileControllerTest {
                 .andExpect(jsonPath("$[*].name", not(hasItem(name))));
     }
 
-    // Tests that attempting to delete a non-existent file returns 500
-    // by calling DELETE with an ID that does not exist in the database
     @Test
     @WithUserDetails(TEST_USERNAME)
     @DisplayName("DELETE /api/files/{id} - returns 500 for non-existent file")
     void deleteFile_invalidId_returns500() {
+        // RuntimeException propagates as ServletException when no @ControllerAdvice
+        // is present — assertThrows captures it rather than failing the test
         assertThrows(Exception.class, () ->
                 mockMvc.perform(delete("/api/files/999999")));
     }

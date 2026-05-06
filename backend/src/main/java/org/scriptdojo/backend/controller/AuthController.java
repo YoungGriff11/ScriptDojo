@@ -11,12 +11,10 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * REST controller handling user authentication operations.
- *
  * Currently exposes a single endpoint for new user registration.
  * Login and logout are handled entirely by Spring Security's built-in
  * form login mechanism configured in SecurityConfig — no controller
  * endpoint is required for those flows.
- *
  * Base path: /api/auth (permitted without authentication in SecurityConfig)
  */
 @RestController
@@ -31,14 +29,11 @@ public class AuthController {
 
     /**
      * Registers a new user account.
-     *
      * Validates the incoming request body against the constraints defined in
      * {@link RegisterRequest} (e.g. non-blank username, valid email format),
      * checks that the chosen username is not already taken, then persists the
      * new account with a hashed password and a default role of USER.
-     *
      * POST /api/auth/register
-     *
      * @param request the registration payload containing username, password, and email;
      *                validated by Jakarta Bean Validation before this method is invoked
      * @return 200 OK with a confirmation message if registration succeeds,
