@@ -1,18 +1,42 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 
+/**
+ * Registration page for ScriptDojo.
+ * Validates field inputs client-side before submitting to POST /api/auth/register,
+ * then maps any backend error responses to user-friendly messages.
+ * Validation is intentionally duplicated between client and server — the client-side
+ * check provides immediate inline feedback per field, while the server enforces the
+ * same rules via Jakarta Bean Validation on RegisterRequest as a safety net.
+ * On success, a confirmation message is shown and the user is redirected to /login
+ * after a short delay so they can read the message before the page changes.
+ */
 export default function SignupPage() {
   const navigate = useNavigate()
-  const [error, setError]     = useState('')
-  const [success, setSuccess] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [error, setError]       = useState('')   // Global error message (API or network)
+  const [success, setSuccess]   = useState('')   // Success message shown before redirect
+  const [loading, setLoading]   = useState(false)
   const [fieldErrors, setFieldErrors] = useState({
     username: '',
     password: '',
     email: '',
   })
 
-  // ── Client-side validation ───────────────────────────
+  // ─ Client-side validation 
+
+  /**
+   * Validates all three registration fields against the same rules enforced
+   * by RegisterRequest on the backend. Returns a per-field errors object and
+   * a boolean indicating overall validity.
+   * Rules mirror the backend constraints:
+   *   username — required, 3–20 chars, alphanumeric and underscores only
+   *   password — required, minimum 6 chars
+   *   email    — required, must match a basic email pattern
+   * @param {string} username
+   * @param {string} password
+   * @param {string} email
+   * @returns {{ errors: object, valid: boolean }}
+   */
   function validate(username, password, email) {
     const errors = { username: '', password: '', email: '' }
     let valid = true
@@ -50,7 +74,17 @@ export default function SignupPage() {
     return { errors, valid }
   }
 
-  // ── Map backend error messages to friendly text ──────
+  // Backend error mapping 
+
+  /**
+   * Maps raw backend error response text to a user-friendly message.
+   * Inspects the response text for known keywords (username, email, taken,
+   * exists, already) and returns a plain-English equivalent.
+   * Falls back to the raw backend text if no pattern matches, or a generic
+   * message if the text is empty.
+   * @param {string} text - the raw text body from the error response
+   * @returns {string} a user-friendly error message
+   */
   function parseBackendError(text) {
     const lower = text.toLowerCase()
     if (lower.includes('username') && (lower.includes('taken') || lower.includes('exists') || lower.includes('already'))) {
@@ -68,10 +102,20 @@ export default function SignupPage() {
     if (lower.includes('email')) {
       return 'Invalid email address. Please check and try again.'
     }
-    // Fallback — show the raw backend message
     return text || 'Registration failed. Please try again.'
   }
 
+  // ─ Form submission
+
+  /**
+   * Handles form submission by running client-side validation first, then
+   * posting to POST /api/auth/register as JSON.
+   * Clears all previous error and success state at the start of each attempt
+   * so stale messages are never shown alongside new ones.
+   * On success, shows a confirmation message and redirects to /login after 2s.
+   *
+   * @param {React.FormEvent} e - the form submit event
+   */
   async function handleSubmit(e) {
     e.preventDefault()
     setError('')
@@ -82,7 +126,7 @@ export default function SignupPage() {
     const password = e.target.password.value
     const email    = e.target.email.value.trim()
 
-    // Client-side validation first
+    // Run client-side validation before hitting the network
     const { errors, valid } = validate(username, password, email)
     if (!valid) {
       setFieldErrors(errors)
@@ -102,12 +146,13 @@ export default function SignupPage() {
 
       if (res.ok) {
         setSuccess(`✅ Account created successfully! Welcome, ${username}. Redirecting to login...`)
+        // Short delay so the user can read the success message before navigating
         setTimeout(() => navigate('/login'), 2000)
       } else if (res.status === 409) {
-        // 409 Conflict = duplicate username or email
+        // 409 Conflict — duplicate username or email
         setError(parseBackendError(text))
       } else if (res.status === 400) {
-        // 400 Bad Request = validation error from backend
+        // 400 Bad Request — Bean Validation failure on the backend
         setError(parseBackendError(text))
       } else if (res.status >= 500) {
         setError('Server error. Please try again in a moment.')
@@ -129,7 +174,7 @@ export default function SignupPage() {
 
         <form onSubmit={handleSubmit} style={styles.form}>
 
-          {/* ── Username ── */}
+          {/* Username — red border and inline error when invalid */}
           <div style={styles.fieldGroup}>
             <input
               style={{
@@ -146,7 +191,7 @@ export default function SignupPage() {
             )}
           </div>
 
-          {/* ── Password ── */}
+          {/* Password — red border and inline error when invalid */}
           <div style={styles.fieldGroup}>
             <input
               style={{
@@ -163,7 +208,7 @@ export default function SignupPage() {
             )}
           </div>
 
-          {/* ── Email ── */}
+          {/* Email — red border and inline error when invalid */}
           <div style={styles.fieldGroup}>
             <input
               style={{
@@ -180,16 +225,17 @@ export default function SignupPage() {
             )}
           </div>
 
+          {/* Button is dimmed and disabled during the registration request */}
           <button style={{
             ...styles.button,
             opacity: loading ? 0.7 : 1,
-            cursor: loading ? 'not-allowed' : 'pointer',
+            cursor:  loading ? 'not-allowed' : 'pointer',
           }} type="submit" disabled={loading}>
             {loading ? 'Creating account...' : 'Sign Up'}
           </button>
         </form>
 
-        {/* ── Global messages ── */}
+        {/* Global messages — only one is shown at a time */}
         {error && (
           <div style={{ ...styles.message, ...styles.errorMsg }}>
             ❌ {error}
@@ -209,6 +255,8 @@ export default function SignupPage() {
   )
 }
 
+// ─ Inline styles
+// Defined outside the component to prevent object recreation on every render.
 const styles = {
   body: {
     minHeight: '100vh',

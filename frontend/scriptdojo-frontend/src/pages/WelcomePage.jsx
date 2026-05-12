@@ -1,5 +1,12 @@
 import { useNavigate } from 'react-router-dom'
 
+/**
+ * Landing page for ScriptDojo — the first page unauthenticated visitors see.
+ * Presents the application name, tagline, and two call-to-action buttons
+ * that navigate to the login and signup pages respectively.
+ * No authentication check is performed here — this page is intentionally public
+ * and registered as a permit-all route in SecurityConfig and SpaController.
+ */
 export default function WelcomePage() {
   const navigate = useNavigate()
 
@@ -28,9 +35,13 @@ export default function WelcomePage() {
   )
 }
 
+// ─ Inline styles
+// Defined outside the component to prevent object recreation on every render.
+// Dark terminal aesthetic with green glow — ScriptDojo's brand identity.
 const styles = {
   body: {
     fontFamily: 'Segoe UI, sans-serif',
+    // Dark-to-dark-green gradient reinforces the terminal/coding theme
     background: 'linear-gradient(135deg, #0f0f0f, #001a00)',
     color: '#0f0',
     minHeight: '100vh',
@@ -45,7 +56,7 @@ const styles = {
     background: '#111',
     padding: '60px 80px',
     borderRadius: '20px',
-    boxShadow: '0 0 30px #0f0',
+    boxShadow: '0 0 30px #0f0', // Green glow matching the brand colour
     border: '2px solid #0f0',
     width: '100%',
     maxWidth: '550px',
@@ -58,7 +69,7 @@ const styles = {
   subtitle: {
     fontSize: 'clamp(1em, 2vw, 1.3em)',
     margin: '0 0 8px 0',
-    color: '#afa',
+    color: '#afa', // Softer green for supporting text
   },
   tagline: {
     fontSize: 'clamp(1em, 2vw, 1.3em)',
@@ -69,7 +80,7 @@ const styles = {
     display: 'flex',
     justifyContent: 'center',
     gap: '20px',
-    flexWrap: 'wrap',
+    flexWrap: 'wrap', // Stacks buttons vertically on narrow viewports
   },
   button: {
     padding: '15px 40px',
@@ -81,11 +92,11 @@ const styles = {
     transition: 'opacity 0.2s',
   },
   loginBtn: {
-    background: '#0ff',
+    background: '#0ff', // Cyan — visually distinct from the signup button
     color: 'black',
   },
   signupBtn: {
-    background: '#0f0',
+    background: '#0f0', // Brand green — primary call to action
     color: 'black',
   },
 }

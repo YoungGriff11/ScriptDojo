@@ -1,62 +1,87 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 
+/**
+ * Login page for ScriptDojo.
+ * Submits credentials to Spring Security's form login endpoint (/perform_login)
+ * and verifies the session was established before navigating to /dashboard.
+ * Spring Security responds to /perform_login with a redirect rather than a
+ * standard JSON response, so redirect: 'manual' is used to prevent the browser
+ * from following the redirect automatically. A secondary GET /api/user/me check
+ * is then used to confirm the session cookie was set correctly before navigating.
+ */
 export default function LoginPage() {
   const navigate = useNavigate()
-  const [error, setError] = useState('')
+  const [error, setError]     = useState('')
   const [loading, setLoading] = useState(false)
-  
 
-async function handleSubmit(e) {
-  e.preventDefault()
-  setLoading(true)
-  setError('')
+  /**
+   * Handles form submission by posting credentials to /perform_login as
+   * URL-encoded form data, which is the format Spring Security's form login
+   * processing expects.
+   * Because Spring Security responds with a 302 redirect on both success and
+   * failure, the response type rather than status code is used to detect the
+   * outcome. A secondary /api/user/me request confirms the session is valid
+   * before navigating, catching the case where credentials were wrong but the
+   * response still appeared redirect-like.
+   * @param {React.FormEvent} e - the form submit event
+   */
+  async function handleSubmit(e) {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
 
-  const username = e.target.username.value.trim()
-  const password = e.target.password.value
+    const username = e.target.username.value.trim()
+    const password = e.target.password.value
 
-  if (!username) {
-    setError('Please enter your username.')
-    setLoading(false)
-    return
-  }
+    // Client-side validation before hitting the network
+    if (!username) {
+      setError('Please enter your username.')
+      setLoading(false)
+      return
+    }
+    if (!password) {
+      setError('Please enter your password.')
+      setLoading(false)
+      return
+    }
 
-  if (!password) {
-    setError('Please enter your password.')
-    setLoading(false)
-    return
-  }
+    // Spring Security's /perform_login expects application/x-www-form-urlencoded
+    const formData = new URLSearchParams()
+    formData.append('username', username)
+    formData.append('password', password)
 
-  const formData = new URLSearchParams()
-  formData.append('username', username)
-  formData.append('password', password)
+    try {
+      const res = await fetch('/perform_login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        credentials: 'include',
+        body: formData,
+        // Prevent the browser from following the Spring Security redirect —
+        // we handle navigation manually after verifying the session
+        redirect: 'manual',
+      })
 
-  try {
-    const res = await fetch('/perform_login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      credentials: 'include',
-      body: formData,
-      redirect: 'manual',
-    })
-
-    if (res.type === 'opaqueredirect' || res.status === 302 || res.status === 200) {
-      // Verify the login actually worked by checking session
-      const check = await fetch('/api/user/me', { credentials: 'include' })
-      if (check.ok) {
-        navigate('/dashboard')
+      // Spring Security returns a redirect on both success and failure.
+      // opaqueredirect is the fetch API's type for a manually-intercepted redirect.
+      if (res.type === 'opaqueredirect' || res.status === 302 || res.status === 200) {
+        // Verify the login actually succeeded by checking whether the session
+        // cookie grants access to an authenticated endpoint
+        const check = await fetch('/api/user/me', { credentials: 'include' })
+        if (check.ok) {
+          navigate('/dashboard')
+        } else {
+          setError('Invalid username or password. Please try again.')
+        }
       } else {
         setError('Invalid username or password. Please try again.')
       }
-    } else {
-      setError('Invalid username or password. Please try again.')
+    } catch {
+      setError('Invalid username or password')
+    } finally {
+      setLoading(false)
     }
-  } catch {
-    setError('Invalid username or password')
-  } finally {
-    setLoading(false)
   }
-}
 
   return (
     <div style={styles.body}>
@@ -79,6 +104,7 @@ async function handleSubmit(e) {
             placeholder="Password"
             required
           />
+          {/* Button is disabled during the login request to prevent double submission */}
           <button style={styles.button} type="submit" disabled={loading}>
             {loading ? 'Logging in...' : 'Log In'}
           </button>
@@ -94,6 +120,8 @@ async function handleSubmit(e) {
   )
 }
 
+// ── Inline styles ─────────────────────────────────────────────────────────────
+// Defined outside the component to prevent object recreation on every render.
 const styles = {
   body: {
     minHeight: '100vh',

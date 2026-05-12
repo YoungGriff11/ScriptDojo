@@ -1,6 +1,4 @@
-# ═══════════════════════════════════════════════════════════════════════════════
 # STAGE 1 — Build the React frontend
-# ═══════════════════════════════════════════════════════════════════════════════
 FROM node:20-slim AS frontend-build
 
 WORKDIR /app/frontend
@@ -17,9 +15,8 @@ COPY frontend/scriptdojo-frontend/ ./
 # Build the React app into static files
 RUN npm run build
 
-# ═══════════════════════════════════════════════════════════════════════════════
 # STAGE 2 — Build the Spring Boot backend (with React inside it)
-# ═══════════════════════════════════════════════════════════════════════════════
+
 FROM eclipse-temurin:21-jdk-jammy AS backend-build
 
 WORKDIR /app/backend
@@ -44,9 +41,8 @@ COPY --from=frontend-build /app/frontend/dist/ ./src/main/resources/static/
 # Build the JAR, skipping tests
 RUN ./mvnw package -DskipTests -B
 
-# ═══════════════════════════════════════════════════════════════════════════════
 # STAGE 3 — Final runtime image
-# ═══════════════════════════════════════════════════════════════════════════════
+
 FROM eclipse-temurin:21-jdk-jammy AS runtime
 
 WORKDIR /app
